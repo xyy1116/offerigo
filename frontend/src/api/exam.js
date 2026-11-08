@@ -25,11 +25,6 @@ export function getBankVersion() {
   return silentGet('/exam/bank/version')
 }
 
-// 触发题库更新（后台异步）
-export function refreshBank() {
-  return request.post('/exam/bank/refresh')
-}
-
 // 当前岗位能匹配到的真题数量
 export function getBankMatch(params) {
   return request.get('/exam/bank/match', { params })

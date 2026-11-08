@@ -263,9 +263,3 @@ function allocatePoints(rows, W) {
   while (assigned < 100 && k < order.length) { points[order[k]]++; assigned++; k++ }
   return points
 }
-
-/** 数值格式化（保留 1 位小数，供 UI 复用）。 */
-export function fmtScore(v) {
-  const n = Number(v)
-  return Number.isFinite(n) ? round1(n) : 0
-}

@@ -3975,200 +3975,6 @@ async function exportResumeWord() {
   min-width: 0;
 }
 
-.recommend-panel {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.recommend-banner {
-  font-size: 13px;
-  color: var(--color-accent);
-  background: var(--color-accent-soft);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.recommend-empty {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--color-text-2);
-  padding: 18px 0;
-}
-
-.recommend-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.recommend-item {
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  background: var(--color-surface);
-  overflow: hidden;
-}
-
-.recommend-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-}
-
-.recommend-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.recommend-rank {
-  flex: none;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-muted);
-  color: var(--color-text-2);
-  font-size: 12px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.recommend-info {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.recommend-job {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-  line-height: 1.4;
-  transition: color 0.15s ease;
-}
-.recommend-job:hover {
-  color: var(--color-accent);
-}
-.recommend-job-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.recommend-caret {
-  flex: none;
-  font-size: 11px;
-  color: var(--color-accent);
-}
-
-.recommend-meta {
-  margin-top: 4px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 14px;
-  font-size: 12px;
-  color: var(--color-text-2);
-}
-
-.recommend-right {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.recommend-pct {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-accent);
-  font-variant-numeric: tabular-nums;
-}
-
-.recommend-source {
-  font-size: 12px;
-  color: var(--color-accent);
-  background: var(--color-accent-soft);
-  border-radius: 6px;
-  padding: 3px 8px;
-  white-space: nowrap;
-}
-
-.recommend-footer {
-  display: flex;
-  justify-content: center;
-  padding-top: 4px;
-}
-
-.recommend-shortage {
-  margin: 10px 0 0;
-  text-align: center;
-  font-size: 12px;
-  color: var(--color-text-2);
-}
-
-.recommend-detail {
-  border-top: 1px solid var(--color-border);
-  padding: 12px 14px;
-  background: var(--color-surface-muted);
-}
-
-.recommend-detail-fields {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 22px;
-  margin-bottom: 12px;
-}
-
-.recommend-detail-field {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: 13px;
-}
-.recommend-detail-field .f-label {
-  color: var(--color-text-2);
-  white-space: nowrap;
-}
-.recommend-detail-field .f-value {
-  color: var(--color-text);
-  font-weight: 600;
-}
-
-.recommend-detail-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 6px;
-}
-
-.recommend-req {
-  margin: 0;
-  font-family: inherit;
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--color-text);
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 260px;
-  overflow-y: auto;
-}
 
 .panel {
   background: var(--color-surface);
@@ -6114,14 +5920,6 @@ async function exportResumeWord() {
 .new-fab.is-on {
   background: var(--color-accent);
 }
-.latest-banner {
-  padding: 8px 12px;
-  font-size: 12px;
-  color: var(--color-text-3);
-  background: var(--color-surface-muted);
-  border: 1px dashed var(--color-border-strong);
-  border-radius: var(--radius-sm);
-}
 
 /* —— 添加记录：筛选栏 —— */
 .filter-bar {
@@ -8011,10 +7809,6 @@ async function exportResumeWord() {
   margin-top: 0;
 }
 
-.recommend-bottom {
-  margin-top: 4px;
-}
-
 /* —— 侧边栏内容 ——*/
 .side-section {
   padding-top: 12px;
@@ -8122,10 +7916,6 @@ async function exportResumeWord() {
 .material-drawer {
   background: var(--color-surface);
   border-color: var(--color-border);
-}
-.recommend-panel,
-.recommend-bottom {
-  background: var(--color-surface);
 }
 
 /* ============================================================
