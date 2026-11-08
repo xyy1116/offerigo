@@ -720,25 +720,30 @@ onUnmounted(() => {
   margin-bottom: 16px;
 }
 .account-grid {
-  display: grid;
-  grid-template-columns: minmax(220px, 280px) 1fr;
-  gap: 24px;
-  align-items: start;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
 }
 .account-profile {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
+}
+.account-photo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .account-photo-title {
-  margin-bottom: 10px;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
 }
 @media (max-width: 900px) {
   .account-grid {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 16px;
   }
 }
@@ -833,8 +838,8 @@ onUnmounted(() => {
   gap: 16px;
 }
 .user-avatar {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   object-fit: cover;
   background: var(--color-accent-soft);
