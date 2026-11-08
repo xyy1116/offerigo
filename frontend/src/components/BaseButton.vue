@@ -35,7 +35,7 @@ defineEmits(['click'])
   gap: 6px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  background: var(--gradient-action);
+  background: var(--color-action);
   color: var(--color-action-text);
   box-shadow: var(--shadow-teal);
   font-family: inherit;
@@ -45,13 +45,12 @@ defineEmits(['click'])
   white-space: nowrap;
   cursor: pointer;
   transition:
-    filter 0.18s ease,
+    background-color 0.18s ease,
     transform 0.18s var(--ease-out-expo),
     box-shadow 0.18s ease;
 }
 .base-button:hover {
-  background: var(--gradient-action);
-  filter: brightness(1.06);
+  background: var(--color-action-hover);
   transform: translateY(-1px);
   box-shadow: var(--shadow-teal);
 }
@@ -62,8 +61,7 @@ defineEmits(['click'])
   transition: transform 0.18s var(--ease-out-expo);
 }
 .base-button:active {
-  background: var(--gradient-action);
-  filter: brightness(0.96);
+  background: var(--color-action-active);
   transform: translateY(0) scale(0.98);
   box-shadow: none;
 }
