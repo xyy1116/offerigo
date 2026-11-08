@@ -206,9 +206,9 @@ async function loadStats() {
     const data = res.data?.data || {}
     const list = []
     if (Number(data.questionCount) > 0) list.push({ label: '真题目库', value: Number(data.questionCount), suffix: ' 题' })
-    if (Number(data.companyCount) > 0) list.push({ label: '覆盖企业', value: Number(data.companyCount), suffix: ' 家' })
-    if (Number(data.sourceCount) > 0) list.push({ label: '真题来源', value: Number(data.sourceCount), suffix: ' 个' })
-    if (Number(data.tagCount) > 0) list.push({ label: '技术标签', value: Number(data.tagCount), suffix: ' 个' })
+    if (Number(data.jobCount) > 0) list.push({ label: '招聘岗位', value: Number(data.jobCount), suffix: ' 个' })
+    if (Number(data.materialCount) > 0) list.push({ label: '简历素材', value: Number(data.materialCount), suffix: ' 条' })
+    if (Number(data.activityCount) > 0) list.push({ label: 'AI 求职记录', value: Number(data.activityCount), suffix: ' 条' })
     stats.value = list
     displayed.value = list.map(() => 0)
   } catch (e) {

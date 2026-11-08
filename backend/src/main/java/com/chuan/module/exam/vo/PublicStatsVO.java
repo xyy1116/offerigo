@@ -5,7 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 公开统计：首页展示平台规模，只包含题库与来源信息，不含用户数据。
+ * 公开统计：首页展示平台规模，覆盖题库、岗位、素材与求职记录，不含用户隐私数据。
  */
 @Data
 public class PublicStatsVO implements Serializable {
@@ -13,12 +13,12 @@ public class PublicStatsVO implements Serializable {
     /** 真题目库总题数。 */
     private Long questionCount;
 
-    /** 题库覆盖的企业数量。 */
-    private Integer companyCount;
+    /** 招聘岗位数量（推荐池 + 目标岗位）。 */
+    private Long jobCount;
 
-    /** 真题来源数量。 */
-    private Integer sourceCount;
+    /** 简历素材条目数。 */
+    private Long materialCount;
 
-    /** 题库涉及的技术标签数量（去重）。 */
-    private Integer tagCount;
+    /** AI 求职记录数（模拟面试 + 笔试试卷 + 投递）。 */
+    private Long activityCount;
 }
