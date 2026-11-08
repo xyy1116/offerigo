@@ -70,7 +70,8 @@ body,
   flex: 1;
   min-height: 0;
   overflow: auto;
-  background: var(--color-page-bg);
+  background: var(--bg-canvas);
+  background-attachment: fixed;
   /* 头部始终 fixed：内容区自留 56px，首页用负 margin 顶到头部下面，
      这样切换路由时页面不会因为头部进出文档流而上下跳 56px */
   padding-top: 56px;

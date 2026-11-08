@@ -288,6 +288,9 @@ onUnmounted(() => {
   right: 0;
   height: 56px;
   background: var(--color-nav);
+  background: color-mix(in srgb, var(--color-nav) 84%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.08);
+  backdrop-filter: blur(14px) saturate(1.08);
   border-bottom: 1px solid var(--color-border);
   z-index: 1000;
   /* 首页切换：底色、分割线一起渐变，不再等旧页淡出后硬切 */
