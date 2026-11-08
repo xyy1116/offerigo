@@ -109,32 +109,32 @@
 }
 .button--danger:not(.button--link) {
   background: var(--color-surface);
-  border-color: #f2c9c4;
+  border-color: var(--color-danger-border);
   color: var(--color-danger);
 }
 .button--danger:not(.button--link):hover {
   background: var(--color-danger-bg);
-  border-color: #e7aca5;
+  border-color: var(--color-danger-border-hover);
   color: var(--color-danger);
 }
 .button--success:not(.button--link) {
   background: var(--color-surface);
-  border-color: #c9e8d7;
+  border-color: var(--color-success-border);
   color: var(--color-success);
 }
 .button--success:not(.button--link):hover {
   background: var(--color-success-bg);
-  border-color: #a8d8bf;
+  border-color: var(--color-success-border-hover);
   color: var(--color-success);
 }
 .button--warning:not(.button--link) {
   background: var(--color-surface);
-  border-color: #f0d9a8;
+  border-color: var(--color-warning-border);
   color: var(--color-warning);
 }
 .button--warning:not(.button--link):hover {
   background: var(--color-warning-bg);
-  border-color: #e7c886;
+  border-color: var(--color-warning-border-hover);
   color: var(--color-warning);
 }
 .button--info:not(.button--link) {

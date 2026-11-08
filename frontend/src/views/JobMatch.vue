@@ -96,7 +96,21 @@
         </div>
 
         <!-- 岗位列表 -->
-        <div v-if="initialLoading" class="analyzing"><span class="spin"></span><span>加载中…</span></div>
+        <div v-if="initialLoading" class="job-skeleton" aria-hidden="true">
+          <div v-for="n in 3" :key="'sk-' + n" class="job-skeleton-card">
+            <div class="sk-row">
+              <span class="sk sk-badge"></span>
+              <span class="sk sk-title"></span>
+              <span class="sk sk-meta"></span>
+            </div>
+            <div class="sk-row">
+              <span class="sk sk-score"></span>
+              <span class="sk sk-line"></span>
+            </div>
+            <span class="sk sk-line sk-line--long"></span>
+            <span class="sk sk-line sk-line--short"></span>
+          </div>
+        </div>
         <div v-else-if="analyzing && !jobList.length" class="analyzing"><span class="spin"></span><span>匹配分析中…</span></div>
         <div v-else-if="!displayedJobs.length" class="empty-tip empty-tip--action">
           <span>{{ stageEmptyText }}</span>
@@ -7807,6 +7821,49 @@ async function exportResumeWord() {
 }
 .job-detail-tags {
   margin-top: 0;
+}
+
+/* 首屏加载骨架：避免列表出现前只有一行“加载中” */
+.job-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.job-skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.sk-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sk {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--color-surface-muted) 25%, var(--color-border) 37%, var(--color-surface-muted) 63%);
+  background-size: 400% 100%;
+  animation: sk-shimmer 1.4s ease infinite;
+}
+.sk-badge { width: 36px; height: 20px; border-radius: 999px; }
+.sk-title { width: 220px; max-width: 45%; height: 16px; }
+.sk-meta { width: 120px; }
+.sk-score { width: 64px; height: 34px; border-radius: 8px; }
+.sk-line { flex: 1; }
+.sk-line--long { width: 80%; }
+.sk-line--short { width: 55%; }
+@keyframes sk-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk { animation: none; }
 }
 
 /* —— 侧边栏内容 ——*/

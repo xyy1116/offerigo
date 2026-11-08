@@ -1072,29 +1072,29 @@ onBeforeUnmount(cleanup)
   flex-wrap: wrap;
   padding: 14px 16px;
   background: var(--color-warning-bg);
-  border: 1px solid #f0d9a8;
+  border: 1px solid var(--color-warning-border);
   border-radius: var(--radius-sm);
   margin-bottom: 20px;
 }
 .recommend-label {
-  color: #92400e;
+  color: var(--color-warning);
   font-size: 13px;
   flex-shrink: 0;
 }
 .recommend-tag {
   padding: 6px 14px;
-  border: 1px solid #f0d9a8;
+  border: 1px solid var(--color-warning-border);
   border-radius: 4px;
   font-size: 13px;
-  color: #92400e;
+  color: var(--color-warning);
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;
   background: var(--color-surface);
 }
 .recommend-tag.active {
-  border-color: #b45309;
-  background: #fdf6e8;
-  color: #92400e;
+  border-color: var(--color-warning);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
   font-weight: 600;
 }
 .group-title {

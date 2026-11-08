@@ -32,9 +32,7 @@
           定制文书、模拟面试、笔试冲刺，让求职准备更有方向。
         </p>
         <div class="hero-actions">
-          <button class="hero-btn hero-btn--primary" @click="scrollToWorkflow">
-            查看功能 <span class="hero-btn-arrow" aria-hidden="true">⌄</span>
-          </button>
+          <button class="hero-btn hero-btn--primary" @click="go('/jobmatch')">立即体验</button>
           <button class="hero-btn hero-btn--ghost" @click="overviewVisible = true">使用指南</button>
         </div>
       </div>
@@ -68,7 +66,11 @@
           :key="s.path"
           class="timeline-node"
           :class="{ active: isActive(s.path) }"
+          role="button"
+          tabindex="0"
           @click="go(s.path)"
+          @keydown.enter="go(s.path)"
+          @keydown.space.prevent="go(s.path)"
         >
           <div class="timeline-dot">{{ i + 1 }}</div>
           <div class="timeline-label">{{ s.label }}</div>
@@ -80,7 +82,11 @@
           v-for="f in functions"
           :key="f.path"
           class="func"
+          role="button"
+          tabindex="0"
           @click="go(f.path)"
+          @keydown.enter="go(f.path)"
+          @keydown.space.prevent="go(f.path)"
         >
           <div class="func-icon"><el-icon :size="26"><component :is="f.icon" /></el-icon></div>
           <h3 class="func-title">{{ f.title }}</h3>
@@ -673,6 +679,12 @@ onMounted(() => {
   width: 24%;
   text-align: center;
   cursor: pointer;
+}
+.timeline-node:focus-visible,
+.func:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
 }
 .timeline-dot {
   width: 36px;

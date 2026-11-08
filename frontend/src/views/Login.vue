@@ -41,13 +41,13 @@
             <div class="field">
               <label class="field-label" for="login-password">密码</label>
               <input id="login-password" v-model="loginForm.password" placeholder="请输入密码" type="password" @keyup.enter="handleLogin" />
-              <a class="field-link" @click="openForgot">忘记密码？</a>
+              <a class="field-link" role="button" tabindex="0" @click="openForgot" @keydown.enter="openForgot">忘记密码？</a>
             </div>
             <div class="field">
               <label class="field-label" for="login-captcha">验证码</label>
               <div class="captcha-row">
                 <input id="login-captcha" v-model="loginForm.captchaCode" placeholder="请输入验证码" type="text" @keyup.enter="handleLogin" />
-                <img :src="captcha.image" class="captcha-img" title="点击刷新" @click="loadCaptcha" />
+                <img :src="captcha.image" class="captcha-img" alt="验证码" title="点击刷新" role="button" tabindex="0" @click="loadCaptcha" @keydown.enter="loadCaptcha" />
               </div>
             </div>
             <div class="remember-row">
@@ -106,7 +106,7 @@
             <el-form-item label="验证码" prop="captchaCode">
               <div class="captcha-row">
                 <el-input v-model="registerForm.captchaCode" placeholder="验证码" :prefix-icon="Key" />
-                <img :src="captcha.image" class="captcha-img" title="点击刷新" @click="loadCaptcha" />
+                <img :src="captcha.image" class="captcha-img" alt="验证码" title="点击刷新" role="button" tabindex="0" @click="loadCaptcha" @keydown.enter="loadCaptcha" />
               </div>
             </el-form-item>
             <el-form-item>

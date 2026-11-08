@@ -51,7 +51,7 @@
         <!-- 未完成面试 -->
         <section
           v-if="activeInterview"
-          class="page-card-anim mt-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-[#efd9b4] bg-[var(--color-warning-bg)] px-4 py-3"
+          class="page-card-anim mt-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3"
           style="animation-delay: 0.06s"
         >
           <History :size="16" class="flex-none text-[var(--color-warning)]" aria-hidden="true" />

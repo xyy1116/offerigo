@@ -48,10 +48,16 @@
   --color-danger: #b42318;
   --color-danger-bg: #fdf0ef;
   --color-danger-fill: #b42318;
+  --color-danger-border: #f2c9c4;
+  --color-danger-border-hover: #e7aca5;
   --color-success: #177a4c;
   --color-success-bg: #eaf6ef;
+  --color-success-border: #c9e8d7;
+  --color-success-border-hover: #a8d8bf;
   --color-warning: #b45309;
   --color-warning-bg: #fdf6e8;
+  --color-warning-border: #f0d9a8;
+  --color-warning-border-hover: #e7c886;
   --color-info: #5f6c77;
 
   /* 统一操作按钮：沿用品牌深青，不引入新色 */
@@ -108,7 +114,7 @@
   --color-surface-muted: #232323;
   --color-text: #f2f2f2;
   --color-text-2: #a8a8a8;
-  --color-text-3: #7a7a7a;
+  --color-text-3: #9a9a9a;
   --color-border: #2b2b2b;
   --color-border-strong: #3b3b3b;
   --color-border-hover: #4b4b4b;
@@ -130,10 +136,16 @@
   --color-danger: #e06c62;
   --color-danger-bg: #2a1818;
   --color-danger-fill: #a83a34;
+  --color-danger-border: #5a2a26;
+  --color-danger-border-hover: #7a3a34;
   --color-success: #62c98e;
   --color-success-bg: #16231b;
+  --color-success-border: #24402f;
+  --color-success-border-hover: #2f5a42;
   --color-warning: #e0b25f;
   --color-warning-bg: #2a2316;
+  --color-warning-border: #4a3a1e;
+  --color-warning-border-hover: #6a5228;
   --color-info: #9a9a9a;
 
   --color-action: #ededed;
