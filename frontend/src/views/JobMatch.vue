@@ -113,8 +113,37 @@
         </div>
         <div v-else-if="analyzing && !jobList.length" class="analyzing"><span class="spin"></span><span>匹配分析中…</span></div>
         <div v-else-if="!displayedJobs.length" class="empty-tip empty-tip--action">
-          <span>{{ stageEmptyText }}</span>
-          <button v-if="!jobList.length && jobActiveCat !== 'recommend'" class="button button--small" @click="importChoiceVisible = true">导入岗位</button>
+          <div v-if="!jobList.length" class="start-guide">
+            <h3 class="start-guide-title">三步开始你的岗位匹配</h3>
+            <ol class="start-guide-steps">
+              <li>
+                <span class="start-guide-num">1</span>
+                <div class="start-guide-body">
+                  <b>完善简历素材</b>
+                  <span>右侧「我的简历素材」添加经历、技能与证书</span>
+                </div>
+                <button class="button button--small button--plain" @click="openSidebarFocus('free')">去补充</button>
+              </li>
+              <li>
+                <span class="start-guide-num">2</span>
+                <div class="start-guide-body">
+                  <b>导入或收藏岗位</b>
+                  <span>从「最新推荐」加入我的收藏，或直接导入岗位</span>
+                </div>
+                <button class="button button--small" @click="importChoiceVisible = true">导入岗位</button>
+              </li>
+              <li>
+                <span class="start-guide-num">3</span>
+                <div class="start-guide-body">
+                  <b>查看 AI 匹配结果</b>
+                  <span>自动打分、待补足项和最相关的简历素材</span>
+                </div>
+              </li>
+            </ol>
+          </div>
+          <template v-else>
+            <span>{{ stageEmptyText }}</span>
+          </template>
         </div>
         <div v-if="analyzing && jobList.length" class="analyze-banner" role="status" aria-live="polite">
           <div class="analyze-banner-head">
@@ -7864,6 +7893,62 @@ async function exportResumeWord() {
 }
 @media (prefers-reduced-motion: reduce) {
   .sk { animation: none; }
+}
+
+/* 空状态引导：三步开始 */
+.start-guide {
+  width: 100%;
+  max-width: 640px;
+  text-align: left;
+}
+.start-guide-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  color: var(--color-text);
+}
+.start-guide-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.start-guide-steps li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+.start-guide-num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+.start-guide-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.start-guide-body b {
+  font-size: 13px;
+  color: var(--color-text);
+}
+.start-guide-body span {
+  font-size: 12px;
+  color: var(--color-text-3);
 }
 
 /* —— 侧边栏内容 ——*/
