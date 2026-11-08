@@ -161,6 +161,7 @@ import {
   Lock,
   DataAnalysis
 } from '@element-plus/icons-vue'
+import { getPublicStats } from '@/api/public'
 
 const route = useRoute()
 const router = useRouter()
@@ -195,13 +196,28 @@ const functions = [
   }
 ]
 
-const stats = [
-  { label: '累计完成简历分析', value: 1280, suffix: '+' },
-  { label: 'AI 模拟面试场次', value: 760, suffix: '+' },
-  { label: '简历优化建议', value: 3600, suffix: '+' },
-  { label: '专项题库条目', value: 2100, suffix: '+' }
-]
-const displayed = ref(stats.map(() => 0))
+const stats = ref([])
+const displayed = ref([])
+
+/** 真实题库规模 + 产品能力指标，不再使用写死的用户量数字 */
+async function loadStats() {
+  let questionCount = 0
+  let companyCount = 0
+  try {
+    const res = await getPublicStats()
+    questionCount = Number(res.data?.data?.questionCount) || 0
+    companyCount = Number(res.data?.data?.companyCount) || 0
+  } catch (e) {
+    // 统计失败时只展示能力指标，不使用假数据
+  }
+  const list = []
+  if (questionCount > 0) list.push({ label: '真题目库', value: questionCount, suffix: ' 题' })
+  if (companyCount > 0) list.push({ label: '覆盖企业', value: companyCount, suffix: ' 家' })
+  list.push({ label: '匹配维度', value: 4, suffix: ' 维' })
+  list.push({ label: 'AI 求职环节', value: 4, suffix: ' 个' })
+  stats.value = list
+  displayed.value = list.map(() => 0)
+}
 
 const techs = [
   { name: '岗位定向AI分析', icon: Aim },
@@ -298,7 +314,7 @@ function runStats() {
   function tick(now) {
     const p = Math.min(1, (now - start) / duration)
     const eased = 1 - Math.pow(1 - p, 3) // easeOutCubic
-    stats.forEach((s, i) => {
+    stats.value.forEach((s, i) => {
       displayed.value[i] = Math.round(s.value * eased)
     })
     if (p < 1) requestAnimationFrame(tick)
@@ -306,10 +322,11 @@ function runStats() {
   requestAnimationFrame(tick)
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadStats()
   // 尊重「减少动态效果」：直接显示最终数值，不播放数字滚动
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    displayed.value = stats.map((s) => s.value)
+    displayed.value = stats.value.map((s) => s.value)
     return
   }
   const observer = new IntersectionObserver(
@@ -833,7 +850,7 @@ onMounted(() => {
   margin: 0 auto;
   padding: 48px 24px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 .stat {
   padding: 0 24px;
