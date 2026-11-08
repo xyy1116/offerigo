@@ -1,6 +1,7 @@
 package com.chuan.module.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chuan.common.exception.BusinessException;
 import com.chuan.common.result.ResultCode;
@@ -104,14 +105,17 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             throw new BusinessException(ResultCode.UNAUTHORIZED);
         }
         if (!StringUtils.hasText(avatar)) {
-            user.setAvatar(null);
-        } else {
-            String trimmed = avatar.trim();
-            if (trimmed.length() > MAX_AVATAR_CHARS || !AVATAR_URI.matcher(trimmed).matches()) {
-                throw new BusinessException("头像格式不支持或文件过大");
-            }
-            user.setAvatar(trimmed);
+            // updateById 会忽略 null 字段，删除头像必须显式置空
+            update(null, new LambdaUpdateWrapper<SysUser>()
+                    .eq(SysUser::getId, userId)
+                    .set(SysUser::getAvatar, null));
+            return;
         }
+        String trimmed = avatar.trim();
+        if (trimmed.length() > MAX_AVATAR_CHARS || !AVATAR_URI.matcher(trimmed).matches()) {
+            throw new BusinessException("头像格式不支持或文件过大");
+        }
+        user.setAvatar(trimmed);
         updateById(user);
     }
 
