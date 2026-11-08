@@ -98,7 +98,7 @@
     </section>
 
     <!-- ======================= 3. 数据统计 ======================= -->
-    <section ref="statsRef" class="stats" v-reveal.repeat>
+    <section v-if="stats.length" ref="statsRef" class="stats" v-reveal.repeat>
       <div class="stats-inner">
         <div v-for="(s, i) in stats" :key="s.label" class="stat">
           <div class="stat-value">
@@ -199,30 +199,23 @@ const functions = [
 const stats = ref([])
 const displayed = ref([])
 
-/** 真实题库规模 + 产品能力指标，不再使用写死的用户量数字 */
+/** 首页统计只使用真实平台规模：题库、覆盖企业、简历模板与固定的 AI 环节数 */
 async function loadStats() {
-  let questionCount = 0
-  let companyCount = 0
   try {
     const res = await getPublicStats()
-    questionCount = Number(res.data?.data?.questionCount) || 0
-    companyCount = Number(res.data?.data?.companyCount) || 0
+    const data = res.data?.data || {}
+    const list = []
+    if (Number(data.questionCount) > 0) list.push({ label: '真题目库', value: Number(data.questionCount), suffix: ' 题' })
+    if (Number(data.companyCount) > 0) list.push({ label: '覆盖企业', value: Number(data.companyCount), suffix: ' 家' })
+    if (Number(data.templateCount) > 0) list.push({ label: '简历模板', value: Number(data.templateCount), suffix: ' 套' })
+    list.push({ label: 'AI 求职环节', value: 4, suffix: ' 个' })
+    stats.value = list
+    displayed.value = list.map(() => 0)
   } catch (e) {
-    // 统计失败时只展示能力指标，不使用假数据
+    // 统计不可用时整块不展示，避免出现占位假数据
+    stats.value = []
+    displayed.value = []
   }
-  const real = []
-  if (questionCount > 0) real.push({ label: '真题目库', value: questionCount, suffix: ' 题' })
-  if (companyCount > 0) real.push({ label: '覆盖企业', value: companyCount, suffix: ' 家' })
-  const capability = [
-    { label: '匹配评估模型', value: 4, suffix: ' 维' },
-    { label: '完整求职链路', value: 5, suffix: ' 大模块' },
-    { label: '定制文书', value: 2, suffix: ' 类' },
-    { label: '每日岗位推荐', value: 10, suffix: ' 条' }
-  ]
-  // 真实数据缺失时用产品能力补齐，始终展示四项，不出现空缺
-  const list = [...real, ...capability].slice(0, 4)
-  stats.value = list
-  displayed.value = list.map(() => 0)
 }
 
 const techs = [
@@ -330,6 +323,7 @@ function runStats() {
 
 onMounted(async () => {
   await loadStats()
+  if (!stats.value.length) return
   // 尊重「减少动态效果」：直接显示最终数值，不播放数字滚动
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     displayed.value = stats.value.map((s) => s.value)
@@ -856,7 +850,7 @@ onMounted(async () => {
   margin: 0 auto;
   padding: 48px 24px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
 }
 .stat {
   padding: 0 24px;

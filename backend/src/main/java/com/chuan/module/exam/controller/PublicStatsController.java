@@ -5,6 +5,7 @@ import com.chuan.common.result.Result;
 import com.chuan.module.exam.entity.ExamQuestionBank;
 import com.chuan.module.exam.mapper.ExamQuestionBankMapper;
 import com.chuan.module.exam.vo.PublicStatsVO;
+import com.chuan.module.jobmatch.service.ResumeTemplateCrawler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,7 +17,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 公开统计接口：首页展示题库规模，不需要登录。
+ * 公开统计接口：首页展示平台规模，不需要登录。
  */
 @RestController
 @RequestMapping("/api/public")
@@ -26,6 +27,7 @@ public class PublicStatsController {
     private static final long CACHE_TTL_MS = 10 * 60 * 1000L;
 
     private final ExamQuestionBankMapper bankMapper;
+    private final ResumeTemplateCrawler templateCrawler;
 
     private volatile PublicStatsVO cache;
     private volatile long cachedAt = 0;
@@ -45,7 +47,7 @@ public class PublicStatsController {
     }
 
     private PublicStatsVO compute() {
-        // 必须带主键列，避免 company 为空的行被 MyBatis 映射成 null 对象
+        // 必须带上主键列，避免 company 为空的行被 MyBatis 映射成 null 对象
         List<ExamQuestionBank> rows = bankMapper.selectList(
                 new LambdaQueryWrapper<ExamQuestionBank>()
                         .select(ExamQuestionBank::getId, ExamQuestionBank::getCompany));
@@ -64,6 +66,7 @@ public class PublicStatsController {
         PublicStatsVO vo = new PublicStatsVO();
         vo.setQuestionCount((long) rows.size());
         vo.setCompanyCount(companies.size());
+        vo.setTemplateCount(templateCrawler.listTemplates().size());
         return vo;
     }
 }
