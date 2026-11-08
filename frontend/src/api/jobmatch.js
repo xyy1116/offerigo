@@ -105,7 +105,7 @@ export function getAnalyzeTask(taskId) {
 
 // 针对单个岗位生成定制简历（生成耗时较长，延长超时）
 export function generateResume(jobId) {
-  return request.post(`/jobmatch/resume/${jobId}`, {}, { timeout: 60000 })
+  return request.post(`/jobmatch/resume/${jobId}`, {}, { timeout: 180000 })
 }
 
 // 简历模板列表（后端实时爬取 + 内置兜底）

@@ -4,17 +4,17 @@ import request, { silentGet } from './request'
 
 // 岗位匹配度评估报告
 export function evaluateApplication(jobId) {
-  return request.get(`/application/${jobId}/evaluate`, { timeout: 60000 })
+  return request.get(`/application/${jobId}/evaluate`, { timeout: 180000 })
 }
 
 // 针对岗位定制简历（复用生成简历链路，返回结构化 JobResumeVO）
 export function tailorApplication(jobId) {
-  return request.get(`/application/${jobId}/tailor`, { timeout: 60000 })
+  return request.get(`/application/${jobId}/tailor`, { timeout: 180000 })
 }
 
 // 生成求职信
 export function coverLetterApplication(jobId) {
-  return request.get(`/application/${jobId}/cover-letter`, { timeout: 60000 })
+  return request.get(`/application/${jobId}/cover-letter`, { timeout: 180000 })
 }
 
 // 生成任务真实阶段（准备素材 / AI 生成 / 整理结果）

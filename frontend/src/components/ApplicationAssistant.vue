@@ -345,11 +345,22 @@ const evaluateView = computed(() => {
 })
 
 // 传入 match 时立即渲染同源匹配评估；切换岗位时优先使用该岗位自己的缓存
+function evaluationKey(v) {
+  if (!v) return ''
+  return JSON.stringify([
+    v.overallScore,
+    v.summary || '',
+    v.matchedPoints || [],
+    v.missingRequirements || []
+  ])
+}
+
 watch(() => props.match, (m) => {
   const jobId = props.job?.id
   const next = m ? evaluateFromMatch.value : null
   const cached = jobId != null ? evaluateCache.get(jobId) : null
-  if (cached && next && cached.overallScore === next.overallScore) {
+  // 分数相同但素材内容变了（优势/缺口不同）时不能用旧缓存
+  if (cached && next && evaluationKey(cached) === evaluationKey(next)) {
     evaluate.value = cached
     return
   }

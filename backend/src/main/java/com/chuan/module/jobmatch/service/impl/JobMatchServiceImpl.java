@@ -43,6 +43,10 @@ import com.chuan.module.jobmatch.vo.ResumeTemplateVO;
 import com.chuan.module.jobmatch.vo.MissingSkillVO;
 import com.chuan.module.jobmatch.vo.ResumeSkillVO;
 import com.chuan.module.jobmatch.vo.TargetJobVO;
+import com.chuan.module.jobrecommend.entity.CrawlJob;
+import com.chuan.module.jobrecommend.entity.UserTargetJob;
+import com.chuan.module.jobrecommend.mapper.CrawlJobMapper;
+import com.chuan.module.jobrecommend.mapper.UserTargetJobMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -307,6 +311,8 @@ public class JobMatchServiceImpl implements JobMatchService {
     private final KnowledgeEntryMapper knowledgeEntryMapper;
     private final TargetJobMapper targetJobMapper;
     private final JobRecommendationMapper jobRecommendationMapper;
+    private final UserTargetJobMapper userTargetJobMapper;
+    private final CrawlJobMapper crawlJobMapper;
     private final JobMatchResultMapper jobMatchResultMapper;
     private final QwenChatClient qwenChatClient;
     private final QwenVisionClient qwenVisionClient;
@@ -925,10 +931,33 @@ public class JobMatchServiceImpl implements JobMatchService {
                     .set(JobRecommendation::getAdded, 0)
                     .set(JobRecommendation::getTargetJobId, null));
         }
+        removeRecommendationMappings(userId, jobs);
         if (!jobs.isEmpty()) {
             clearCache(userId);
         }
         return jobs.size();
+    }
+
+    /** 删除目标岗位后同步清理推荐与岗位的关联，否则该推荐会被当成“已加入”永久排除。 */
+    private void removeRecommendationMappings(Long userId, List<TargetJob> jobs) {
+        List<String> links = jobs.stream()
+                .map(TargetJob::getJobLink)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .collect(Collectors.toList());
+        if (links.isEmpty()) {
+            return;
+        }
+        List<CrawlJob> crawlJobs = crawlJobMapper.selectList(new LambdaQueryWrapper<CrawlJob>()
+                .in(CrawlJob::getSourceUrl, links));
+        if (crawlJobs.isEmpty()) {
+            return;
+        }
+        List<Long> crawlIds = crawlJobs.stream().map(CrawlJob::getId).collect(Collectors.toList());
+        userTargetJobMapper.delete(new LambdaQueryWrapper<UserTargetJob>()
+                .eq(UserTargetJob::getUserId, userId)
+                .in(UserTargetJob::getCrawlJobId, crawlIds));
     }
 
     @Override
@@ -940,6 +969,8 @@ public class JobMatchServiceImpl implements JobMatchService {
                 .eq(JobRecommendation::getUserId, userId)
                 .set(JobRecommendation::getAdded, 0)
                 .set(JobRecommendation::getTargetJobId, null));
+        userTargetJobMapper.delete(new LambdaQueryWrapper<UserTargetJob>()
+                .eq(UserTargetJob::getUserId, userId));
         clearCache(userId);
     }
 

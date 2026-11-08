@@ -997,7 +997,10 @@ public class ExamQuestionCrawler {
             source.setContentHash(hash);
             source.setQuestionCount(count);
             source.setLastStatus(status);
-            source.setLastCrawlTime(LocalDateTime.now());
+            // 只有真正取到内容（OK/SKIP）才算“今天抓过”；FAIL 不刷新时间，便于启动补跑重试
+            if (status != null && (status.startsWith("OK") || status.startsWith("SKIP"))) {
+                source.setLastCrawlTime(LocalDateTime.now());
+            }
             if (source.getId() == null) {
                 sourceMapper.insert(source);
             } else {

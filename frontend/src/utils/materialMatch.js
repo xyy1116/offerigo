@@ -28,14 +28,17 @@ function toText(v) {
   return v == null ? '' : String(v)
 }
 
-/** 抽取英文/技术词（小写、去重、去掉尾部的点/斜杠等）。 */
+/** 抽取英文/技术词（小写、去重、去掉尾部多余的点/斜杠；保留 C++/C# 的技术符号）。 */
 function latinTokens(text) {
   const out = new Set()
   const s = toText(text)
   const matches = s.match(LATIN_RE) || []
   for (const raw of matches) {
-    const w = raw.toLowerCase().replace(/[./+#-]+$/, '')
-    if (w.length >= 2 && !LATIN_STOP.has(w)) out.add(w)
+    // 「C++/Java」按斜杠拆开，两边都算命中
+    for (const part of raw.toLowerCase().split('/')) {
+      const w = part.replace(/[.-]+$/, '')
+      if (w.length >= 2 && !LATIN_STOP.has(w)) out.add(w)
+    }
   }
   return out
 }
@@ -92,13 +95,39 @@ const GENERIC_SIGNALS = ['学历', '专业', '证书', '认证', '资质', '资�
 
 /** 中文数字 → 数值（只处理 1-10，足够覆盖「五年以上经验」这类表述）。 */
 const CN_NUM = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }
-/** 从文本里解析一个「N 年」数值（支持阿拉伯数字与中文数字）。 */
-function parseYears(text) {
+
+/** 把「N年」里的 N 转成数字；4 位年份（如 2020 年毕业）不当作经验年限。 */
+function toYears(token) {
+  if (/^\d+$/.test(token)) {
+    const n = Number(token)
+    return n >= 1900 ? null : n
+  }
+  return CN_NUM[token] ?? null
+}
+
+/** 从岗位要求里解析需要的工作年限，只认「N年(以上)…经验」类表述。 */
+function parseRequiredYears(text) {
   const s = String(text || '')
-  const m = s.match(/(\d+)\s*年/)
-  if (m) return Number(m[1])
-  const cn = s.match(/([一二三四五六七八九十])\s*年/)
-  if (cn) return CN_NUM[cn[1]]
+  const m = s.match(/(\d{1,2}|[一二三四五六七八九十])\s*年\s*(?:及)?以上(?:的)?(?:相关)?(?:工作|开发|从业)?经验/)
+    || s.match(/(\d{1,2}|[一二三四五六七八九十])\s*年(?:以上)?(?:的)?(?:相关)?(?:工作|开发|从业)经验/)
+    || s.match(/工作(?:经验|年限)\s*[:：]?\s*(\d{1,2}|[一二三四五六七八九十])\s*年/)
+  return m ? toYears(m[1]) : null
+}
+
+/** 从简历素材里解析已有工作年限，必须带「经验/工作年限」语境，避免误取毕业年份。 */
+function parseHaveYears(text) {
+  const s = String(text || '')
+  const patterns = [
+    /(\d{1,2}|[一二三四五六七八九十])\s*年(?:以上)?(?:的)?(?:相关)?(?:工作|开发|从业|项目)?经验/,
+    /工作年限\s*[:：]?\s*(\d{1,2}|[一二三四五六七八九十])\s*年/,
+    /(\d{1,2})\s*年(?:工作|开发|从业)/
+  ]
+  for (const p of patterns) {
+    const m = s.match(p)
+    if (!m) continue
+    const n = toYears(m[1])
+    if (n != null) return n
+  }
   return null
 }
 
@@ -108,9 +137,9 @@ function parseYears(text) {
  */
 function experienceRequirementCovered(req, text) {
   if (!/(经验|经历|年限|从业)/.test(req)) return false
-  const need = parseYears(req)
+  const need = parseRequiredYears(req)
   if (need == null) return false
-  const have = parseYears(text)
+  const have = parseHaveYears(text)
   return have != null && have >= need
 }
 

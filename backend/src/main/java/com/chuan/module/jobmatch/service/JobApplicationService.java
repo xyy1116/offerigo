@@ -222,9 +222,17 @@ public class JobApplicationService {
         try {
             Path dir = Paths.get(resumeDir()).resolve(String.valueOf(userId));
             Files.createDirectories(dir);
-            deleteResumeFile(record);
             Path target = dir.resolve(fileName);
+            // 先写新文件成功，再删旧文件，避免写入失败把上一版简历弄丢
             Files.write(target, file.getBytes());
+            String oldPath = record.getResumeFilePath();
+            if (StringUtils.hasText(oldPath) && !oldPath.equals(target.toString())) {
+                try {
+                    Files.deleteIfExists(Paths.get(oldPath));
+                } catch (Exception e) {
+                    log.warn("清理旧简历文件失败 {}: {}", oldPath, e.getMessage());
+                }
+            }
             record.setResumeFilePath(target.toString());
             record.setResumeFileName(fileName);
             record.setResumeVersion(fileName);
@@ -276,7 +284,9 @@ public class JobApplicationService {
         String name = fallbackName(userId);
         String job = StringUtils.hasText(record.getJobName()) ? record.getJobName().trim() : "岗位";
         LocalDateTime at = record.getAppliedAt() != null ? record.getAppliedAt() : LocalDateTime.now();
-        return safe(name) + "-" + safe(job) + "-" + at.format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")) + "." + ext;
+        return safe(name) + "-" + safe(job) + "-"
+                + at.format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+                + "-" + record.getId() + "." + ext;
     }
 
     /** 姓名兜底：简历未给出时取素材里的「姓名：」，再退到账号昵称。 */

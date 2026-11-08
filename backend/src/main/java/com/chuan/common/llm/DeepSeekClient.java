@@ -54,22 +54,6 @@ public class DeepSeekClient {
             "{\"polished\": \"润色后的完整文本\"}\n" +
             "注意：不要编造不存在的经历、数据或技能；如果原文信息缺失，保持留白或通用表达。";
 
-    private static final String TAILOR_PROMPT =
-            "你是一名资深的简历招聘优化专家，负责将候选人简历与目标岗位 JD 进行对齐，生成「针对该岗位定制」的简历改写内容。\n"
-            + "务必实事求是：只优化表达、突出与岗位相关的既有经历与技能，绝不编造候选人未具备的经历、项目、数据或技能。\n"
-            + "严格按 JSON 格式输出，不要输出 JSON 以外的内容，不要使用 Markdown 代码块。输出结构如下：\n"
-            + "{\n"
-            + "  \"selfEvaluation\": \"针对岗位重写后的自我评价\",\n"
-            + "  \"internships\": [{\"description\": \"针对岗位重写后的该段实习/项目描述\"}],\n"
-            + "  \"campusActivities\": [{\"duty\": \"针对岗位重写后的该段校园经历职责\"}],\n"
-            + "  \"highlights\": [\"定制要点1\", \"定制要点2\"]\n"
-            + "}\n"
-            + "要求：\n"
-            + "1. internships 数组长度与原文实习/项目段数一致，按序对应；原文无实习则返回 []。\n"
-            + "2. campusActivities 数组长度与原文校园经历段数一致，按序对应；原文无则返回 []。\n"
-            + "3. highlights 为 3-5 条定制优化要点，说明本次改写的方向。\n"
-            + "4. 描述需自然嵌入岗位 JD 中的关键技能/术语，但仅限候选人本身具备的。";
-
     private static final String COVER_LETTER_PROMPT =
             "你是一名资深求职指导专家，负责为候选人撰写一封针对具体岗位的中文求职信。\n"
             + "务必实事求是：基于候选人真实简历，突出与岗位要求匹配的关键优势，绝不编造经历、数据或技能。\n"
@@ -220,18 +204,6 @@ public class DeepSeekClient {
             log.error("DeepSeek 职业分析失败", e);
             throw new BusinessException("职业发展分析失败，请稍后重试");
         }
-    }
-
-    /** 针对目标岗位定制简历：改写自我评价、实习/校园描述，返回 JSON 字符串。 */
-    public String tailorResume(String resumeSummary, String jobName, String jobRequirement) {
-        if (!StringUtils.hasText(apiKey)) {
-            throw new BusinessException("未配置 DeepSeek API Key，请设置环境变量 DEEPSEEK_API_KEY");
-        }
-        String userPrompt = "【目标岗位】\n" + (jobName == null ? "" : jobName)
-                + "\n\n【岗位要求】\n" + (jobRequirement == null ? "" : jobRequirement)
-                + "\n\n【候选人简历】\n" + resumeSummary
-                + "\n\n请只使用与岗位要求相关的简历内容，无关内容不要写入。";
-        return chatJson(TAILOR_PROMPT, userPrompt, 0.3);
     }
 
     /** 针对目标岗位撰写中文求职信，返回 JSON 字符串。 */

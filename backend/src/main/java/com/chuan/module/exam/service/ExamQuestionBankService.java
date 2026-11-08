@@ -276,16 +276,12 @@ public class ExamQuestionBankService {
     }
 
     public BankVersionVO version() {
-        ExamQuestionSource latest = sourceMapper.selectOne(new LambdaQueryWrapper<ExamQuestionSource>()
-                .orderByDesc(ExamQuestionSource::getLastCrawlTime).last("limit 1"));
+        // 版本取“最新一题入库时间”：只有真正新增题目才变化，避免每日空跑也触发 HOT
+        ExamQuestionBank latest = bankMapper.selectOne(new LambdaQueryWrapper<ExamQuestionBank>()
+                .orderByDesc(ExamQuestionBank::getCreateTime).last("limit 1"));
         BankVersionVO vo = new BankVersionVO();
-        if (latest != null && latest.getLastCrawlTime() != null) {
-            vo.setVersion(latest.getLastCrawlTime().toString());
-        } else {
-            ExamQuestionBank q = bankMapper.selectOne(new LambdaQueryWrapper<ExamQuestionBank>()
-                    .orderByDesc(ExamQuestionBank::getCreateTime).last("limit 1"));
-            vo.setVersion(q != null && q.getCreateTime() != null ? q.getCreateTime().toString() : "");
-        }
+        vo.setVersion(latest != null && latest.getCreateTime() != null
+                ? latest.getCreateTime().toString() : "");
         Long count = bankMapper.selectCount(null);
         vo.setCount(count == null ? 0L : count);
         return vo;
