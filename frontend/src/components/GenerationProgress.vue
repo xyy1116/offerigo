@@ -137,6 +137,8 @@ function formatSec(seconds) {
 
 <style scoped>
 .generation-progress {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -144,7 +146,20 @@ function formatSec(seconds) {
   padding: 12px 14px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: var(--color-accent-soft);
+  background: var(--gradient-soft);
+}
+.generation-progress::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 40%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+  animation: gp-sweep 1.6s linear infinite;
+}
+@keyframes gp-sweep {
+  to { left: 100%; }
 }
 .gp-head {
   display: flex;
@@ -233,5 +248,8 @@ function formatSec(seconds) {
 }
 @keyframes gp-rotate {
   to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .generation-progress::after { animation: none; opacity: 0; }
 }
 </style>

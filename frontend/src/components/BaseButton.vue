@@ -35,8 +35,9 @@ defineEmits(['click'])
   gap: 6px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  background: var(--color-action);
+  background: var(--gradient-action);
   color: var(--color-action-text);
+  box-shadow: var(--shadow-teal);
   font-family: inherit;
   font-size: 13px;
   font-weight: 500;
@@ -44,12 +45,13 @@ defineEmits(['click'])
   white-space: nowrap;
   cursor: pointer;
   transition:
-    background-color 0.18s ease,
+    filter 0.18s ease,
     transform 0.18s var(--ease-out-expo),
     box-shadow 0.18s ease;
 }
 .base-button:hover {
-  background: var(--color-action-hover);
+  background: var(--gradient-action);
+  filter: brightness(1.06);
   transform: translateY(-1px);
   box-shadow: var(--shadow-teal);
 }
@@ -60,7 +62,8 @@ defineEmits(['click'])
   transition: transform 0.18s var(--ease-out-expo);
 }
 .base-button:active {
-  background: var(--color-action-active);
+  background: var(--gradient-action);
+  filter: brightness(0.96);
   transform: translateY(0) scale(0.98);
   box-shadow: none;
 }
@@ -68,13 +71,16 @@ defineEmits(['click'])
   background: var(--color-surface);
   border-color: var(--color-border-strong);
   color: var(--color-text);
+  box-shadow: none;
 }
 .base-button--secondary:hover {
   background: var(--color-surface-muted);
   border-color: var(--color-border-hover);
+  filter: none;
 }
 .base-button--secondary:active {
   background: var(--color-surface-muted);
+  filter: none;
   border-color: var(--color-border-hover);
 }
 .base-button:disabled {

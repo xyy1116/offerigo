@@ -25,7 +25,7 @@
       <div class="hero-copy">
         <h1 class="hero-title">
           <span class="hero-line"><span class="hero-rise">从简历素材出发，</span></span>
-          <span class="hero-line"><span class="hero-rise">找到更匹配的岗位。</span></span>
+          <span class="hero-line"><span class="hero-rise hero-title-accent">找到更匹配的岗位。</span></span>
         </h1>
         <p class="hero-sub">
           以简历素材为基础，AI 对标岗位做匹配评估，<br />
@@ -46,6 +46,7 @@
     <!-- ============ 2. 痛点 + 时间线 + 功能入口 ============ -->
     <section class="workflow">
       <div class="pain" v-reveal.repeat>
+        <span class="section-eyebrow">求职工作流</span>
         <h2 class="section-title">毕业生的求职困境</h2>
         <p class="pain-text">
           绝大多数毕业生从一张空白简历起步，既不知如何把零散的经历整理成
@@ -111,6 +112,7 @@
     <!-- ================= 4. 技术亮点 ================= -->
     <section class="tech" v-reveal.repeat="60">
       <div class="tech-inner">
+        <span class="section-eyebrow">能力矩阵</span>
         <h2 class="tech-title">平台核心优势</h2>
         <div class="tech-tags">
           <div v-for="t in techs" :key="t.name" class="tech-tag">
@@ -420,6 +422,12 @@ onMounted(() => {
   letter-spacing: -0.02em;
   text-wrap: balance;
 }
+.hero-title-accent {
+  background: linear-gradient(120deg, #ffffff 0%, #b8ecf2 52%, #6fd3df 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 .hero-sub {
   margin-top: clamp(16px, 2.2vh, 24px);
   max-width: 34em;
@@ -628,6 +636,23 @@ onMounted(() => {
   letter-spacing: -0.02em;
   color: var(--ink);
 }
+.section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--color-accent);
+}
+.section-eyebrow::before {
+  content: '';
+  width: 22px;
+  height: 1px;
+  background: var(--color-accent);
+  opacity: 0.7;
+}
 .pain-text {
   margin-top: 12px;
   max-width: 640px;
@@ -735,6 +760,8 @@ onMounted(() => {
   margin-top: 40px;
 }
 .func {
+  position: relative;
+  overflow: hidden;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -744,6 +771,20 @@ onMounted(() => {
     border-color 0.2s ease,
     box-shadow 0.2s ease,
     transform 0.2s var(--ease-out-expo);
+}
+.func::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--gradient-action);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.func:hover::after {
+  opacity: 1;
 }
 .func:hover {
   border-color: var(--color-border-hover);

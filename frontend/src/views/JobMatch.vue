@@ -7272,6 +7272,13 @@ async function exportResumeWord() {
 .job-score-big.score-low {
   color: var(--color-text);
 }
+/* 高匹配分数用渐变高光，强化第一眼的识别度 */
+.job-score-big.score-high .score-num-text {
+  background: var(--gradient-title);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 .job-score-big:not(.score-high):not(.score-mid):not(.score-low) {
   color: var(--color-text-3);
 }
