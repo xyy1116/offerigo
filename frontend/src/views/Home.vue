@@ -442,8 +442,6 @@ onMounted(() => {
   margin-top: clamp(22px, 3.4vh, 36px);
 }
 .hero-btn {
-  position: relative;
-  overflow: hidden;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -471,21 +469,6 @@ onMounted(() => {
 .hero-btn--primary {
   background: #f5f5f2;
   color: #101820;
-}
-.hero-btn--primary::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -60%;
-  width: 40%;
-  height: 100%;
-  background: linear-gradient(100deg, transparent, rgba(16, 24, 32, 0.12), transparent);
-  transform: skewX(-18deg);
-  transition: left 0.55s var(--ease-out-expo);
-  pointer-events: none;
-}
-.hero-btn--primary:hover::after {
-  left: 120%;
 }
 .hero-btn--primary:hover {
   background: #ffffff;
