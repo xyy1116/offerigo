@@ -210,11 +210,17 @@ async function loadStats() {
   } catch (e) {
     // 统计失败时只展示能力指标，不使用假数据
   }
-  const list = []
-  if (questionCount > 0) list.push({ label: '真题目库', value: questionCount, suffix: ' 题' })
-  if (companyCount > 0) list.push({ label: '覆盖企业', value: companyCount, suffix: ' 家' })
-  list.push({ label: '匹配维度', value: 4, suffix: ' 维' })
-  list.push({ label: 'AI 求职环节', value: 4, suffix: ' 个' })
+  const real = []
+  if (questionCount > 0) real.push({ label: '真题目库', value: questionCount, suffix: ' 题' })
+  if (companyCount > 0) real.push({ label: '覆盖企业', value: companyCount, suffix: ' 家' })
+  const capability = [
+    { label: '匹配评估模型', value: 4, suffix: ' 维' },
+    { label: '完整求职链路', value: 5, suffix: ' 大模块' },
+    { label: '定制文书', value: 2, suffix: ' 类' },
+    { label: '每日岗位推荐', value: 10, suffix: ' 条' }
+  ]
+  // 真实数据缺失时用产品能力补齐，始终展示四项，不出现空缺
+  const list = [...real, ...capability].slice(0, 4)
   stats.value = list
   displayed.value = list.map(() => 0)
 }
