@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chuan.common.result.Result;
 import com.chuan.module.exam.entity.ExamQuestionBank;
 import com.chuan.module.exam.mapper.ExamQuestionBankMapper;
+import com.chuan.module.exam.mapper.ExamQuestionSourceMapper;
 import com.chuan.module.exam.vo.PublicStatsVO;
-import com.chuan.module.jobmatch.service.ResumeTemplateCrawler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,7 +27,7 @@ public class PublicStatsController {
     private static final long CACHE_TTL_MS = 10 * 60 * 1000L;
 
     private final ExamQuestionBankMapper bankMapper;
-    private final ResumeTemplateCrawler templateCrawler;
+    private final ExamQuestionSourceMapper sourceMapper;
 
     private volatile PublicStatsVO cache;
     private volatile long cachedAt = 0;
@@ -52,26 +52,38 @@ public class PublicStatsController {
     }
 
     private PublicStatsVO compute() {
-        // 必须带上主键列，避免 company 为空的行被 MyBatis 映射成 null 对象
+        // 必须带上主键列，避免整行都为 NULL 时被 MyBatis 映射成 null 对象
         List<ExamQuestionBank> rows = bankMapper.selectList(
                 new LambdaQueryWrapper<ExamQuestionBank>()
-                        .select(ExamQuestionBank::getId, ExamQuestionBank::getCompany));
+                        .select(ExamQuestionBank::getId, ExamQuestionBank::getCompany, ExamQuestionBank::getTechTags));
         Set<String> companies = new HashSet<>();
+        Set<String> tags = new HashSet<>();
         for (ExamQuestionBank row : rows) {
-            if (row == null || !StringUtils.hasText(row.getCompany())) {
+            if (row == null) {
                 continue;
             }
-            for (String company : row.getCompany().split("、")) {
-                String name = company.trim();
-                if (StringUtils.hasText(name) && !"多家大厂".equals(name)) {
-                    companies.add(name);
-                }
-            }
+            addTokens(companies, row.getCompany());
+            addTokens(tags, row.getTechTags());
         }
         PublicStatsVO vo = new PublicStatsVO();
         vo.setQuestionCount((long) rows.size());
         vo.setCompanyCount(companies.size());
-        vo.setTemplateCount(templateCrawler.listTemplates().size());
+        vo.setTagCount(tags.size());
+        Long sources = sourceMapper.selectCount(null);
+        vo.setSourceCount(sources == null ? 0 : sources.intValue());
         return vo;
+    }
+
+    /** 按常见分隔符拆成去重标签，跳过「多家大厂」这种占位值。 */
+    private void addTokens(Set<String> target, String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return;
+        }
+        for (String token : raw.split("[,，、;；/]+")) {
+            String name = token.trim();
+            if (StringUtils.hasText(name) && !"多家大厂".equals(name)) {
+                target.add(name);
+            }
+        }
     }
 }

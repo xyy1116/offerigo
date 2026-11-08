@@ -207,8 +207,8 @@ async function loadStats() {
     const list = []
     if (Number(data.questionCount) > 0) list.push({ label: '真题目库', value: Number(data.questionCount), suffix: ' 题' })
     if (Number(data.companyCount) > 0) list.push({ label: '覆盖企业', value: Number(data.companyCount), suffix: ' 家' })
-    if (Number(data.templateCount) > 0) list.push({ label: '简历模板', value: Number(data.templateCount), suffix: ' 套' })
-    list.push({ label: 'AI 求职环节', value: 4, suffix: ' 个' })
+    if (Number(data.sourceCount) > 0) list.push({ label: '真题来源', value: Number(data.sourceCount), suffix: ' 个' })
+    if (Number(data.tagCount) > 0) list.push({ label: '技术标签', value: Number(data.tagCount), suffix: ' 个' })
     stats.value = list
     displayed.value = list.map(() => 0)
   } catch (e) {
