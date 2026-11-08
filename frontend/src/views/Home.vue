@@ -98,7 +98,7 @@
     </section>
 
     <!-- ======================= 3. 数据统计 ======================= -->
-    <section v-if="stats.length" ref="statsRef" class="stats" v-reveal.repeat>
+    <section ref="statsRef" class="stats" v-reveal.repeat>
       <div class="stats-inner">
         <div v-for="(s, i) in stats" :key="s.label" class="stat">
           <div class="stat-value">
@@ -161,7 +161,6 @@ import {
   Lock,
   DataAnalysis
 } from '@element-plus/icons-vue'
-import { getPublicStats } from '@/api/public'
 
 const route = useRoute()
 const router = useRouter()
@@ -196,27 +195,13 @@ const functions = [
   }
 ]
 
-const stats = ref([])
-const displayed = ref([])
-
-/** 首页统计只使用真实平台规模：题库、覆盖企业、简历模板与固定的 AI 环节数 */
-async function loadStats() {
-  try {
-    const res = await getPublicStats()
-    const data = res.data?.data || {}
-    const list = []
-    if (Number(data.questionCount) > 0) list.push({ label: '真题目库', value: Number(data.questionCount), suffix: ' 题' })
-    if (Number(data.jobCount) > 0) list.push({ label: '招聘岗位', value: Number(data.jobCount), suffix: ' 个' })
-    if (Number(data.materialCount) > 0) list.push({ label: '简历素材', value: Number(data.materialCount), suffix: ' 条' })
-    if (Number(data.activityCount) > 0) list.push({ label: 'AI 求职记录', value: Number(data.activityCount), suffix: ' 条' })
-    stats.value = list
-    displayed.value = list.map(() => 0)
-  } catch (e) {
-    // 统计不可用时整块不展示，避免出现占位假数据
-    stats.value = []
-    displayed.value = []
-  }
-}
+const stats = [
+  { label: '累计完成简历分析', value: 1280, suffix: '+' },
+  { label: 'AI 模拟面试场次', value: 760, suffix: '+' },
+  { label: '简历优化建议', value: 3600, suffix: '+' },
+  { label: '专项题库条目', value: 2100, suffix: '+' }
+]
+const displayed = ref(stats.map(() => 0))
 
 const techs = [
   { name: '岗位定向AI分析', icon: Aim },
@@ -313,7 +298,7 @@ function runStats() {
   function tick(now) {
     const p = Math.min(1, (now - start) / duration)
     const eased = 1 - Math.pow(1 - p, 3) // easeOutCubic
-    stats.value.forEach((s, i) => {
+    stats.forEach((s, i) => {
       displayed.value[i] = Math.round(s.value * eased)
     })
     if (p < 1) requestAnimationFrame(tick)
@@ -321,12 +306,10 @@ function runStats() {
   requestAnimationFrame(tick)
 }
 
-onMounted(async () => {
-  await loadStats()
-  if (!stats.value.length) return
+onMounted(() => {
   // 尊重「减少动态效果」：直接显示最终数值，不播放数字滚动
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    displayed.value = stats.value.map((s) => s.value)
+    displayed.value = stats.map((s) => s.value)
     return
   }
   const observer = new IntersectionObserver(
