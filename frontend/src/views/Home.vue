@@ -610,7 +610,7 @@ onMounted(() => {
 }
 .btn--ghost:hover {
   background: var(--color-surface-muted);
-  border-color: #b7cbd5;
+  border-color: var(--color-border-hover);
   box-shadow: var(--shadow-sm);
 }
 
@@ -653,7 +653,7 @@ onMounted(() => {
   transition: border-color 0.18s ease, color 0.18s ease;
 }
 .pain-tags li:hover {
-  border-color: #b7cbd5;
+  border-color: var(--color-border-hover);
   color: var(--color-text);
 }
 
@@ -746,7 +746,7 @@ onMounted(() => {
     transform 0.2s var(--ease-out-expo);
 }
 .func:hover {
-  border-color: #b7cbd5;
+  border-color: var(--color-border-hover);
   box-shadow: var(--shadow-hover);
   transform: translateY(-3px);
 }
@@ -783,9 +783,9 @@ onMounted(() => {
 /* ===== Statistics ===== */
 .stats {
   margin-top: 72px;
-  background: var(--color-accent-soft);
-  border-top: 1px solid #d7e5e8;
-  border-bottom: 1px solid #d7e5e8;
+  background: linear-gradient(180deg, var(--color-accent-soft) 0%, var(--color-surface) 100%);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
 }
 .stats-inner {
   max-width: 1200px;
@@ -796,16 +796,16 @@ onMounted(() => {
 }
 .stat {
   padding: 0 24px;
-  border-left: 1px solid #cfe0e5;
+  border-left: 1px solid var(--color-border);
 }
 .stat:first-child {
   padding-left: 0;
   border-left: none;
 }
 .stat-value {
-  font-size: 36px;
+  font-size: 40px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   color: var(--color-primary);
   line-height: 1;
   font-family: var(--font-display);
@@ -814,8 +814,9 @@ onMounted(() => {
   font-variant-numeric: tabular-nums;
 }
 .stat-label {
-  margin-top: 10px;
+  margin-top: 12px;
   font-size: 12px;
+  letter-spacing: 0.02em;
   color: var(--color-text-2);
 }
 
@@ -829,7 +830,7 @@ onMounted(() => {
   text-align: center;
 }
 .tech-title {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--ink);
@@ -844,9 +845,9 @@ onMounted(() => {
 .tech-tag {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
+  gap: 10px;
+  padding: 9px 16px 9px 9px;
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--body-c);
   border: 1px solid var(--color-border);
@@ -856,12 +857,19 @@ onMounted(() => {
     transform 0.2s var(--ease-out-expo);
 }
 .tech-tag:hover {
-  border-color: #b7cbd5;
+  border-color: var(--color-border-hover);
   box-shadow: var(--shadow-sm);
   transform: translateY(-2px);
 }
 .tech-tag-icon {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--color-accent-soft);
   color: var(--color-accent);
 }
 .tech-tag-name {
