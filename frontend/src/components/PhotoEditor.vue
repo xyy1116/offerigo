@@ -17,7 +17,7 @@
         <button
           v-if="photo"
           type="button"
-          class="button button--link button--danger"
+          class="button button--plain button--small photo-delete"
           @click="$emit('change', '')"
         >
           删除
@@ -112,6 +112,15 @@ async function onFileChange(e) {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+.photo-delete {
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
+}
+.photo-delete:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-border-hover);
 }
 .photo-tip {
   margin: 0;
