@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- 首页 hero 首帧：提前拿图，路由切到首页时不会先黑一下再出图 -->
+    <link rel="preload" as="image" href="/stratum-vision-poster.jpg" />
+    <meta name="theme-color" content="#ffffff" />
+    <script>
+      // 首屏前应用缓存主题，避免暗色模式先闪白
+      (function () {
+        var mode = 'system'
+        try { mode = localStorage.getItem('theme-mode') || 'system' } catch (e) {}
+        var dark = mode === 'dark' || (mode === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        var root = document.documentElement
+        root.dataset.theme = dark ? 'dark' : 'light'
+        root.classList.toggle('dark', dark)
+        root.style.colorScheme = dark ? 'dark' : 'light'
+        root.style.backgroundColor = dark ? '#0d0d0d' : '#f4f7fa'
+        var meta = document.querySelector('meta[name="theme-color"]')
+        if (meta) meta.setAttribute('content', dark ? '#0d0d0d' : '#ffffff')
+      })()
+    </script>
+    <title>OfferiGo 智能求职助手</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

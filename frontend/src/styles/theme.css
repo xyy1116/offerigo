@@ -1,0 +1,443 @@
+/* ============================================================
+   设计系统：冷调蓝灰画布 + 深青主色
+   - 页面底色 #f4f7fa，白卡片，深青只用于操作、选中与数据
+   - 静止卡片用 1px 描边分层；浮层才用阴影
+   ============================================================ */
+
+/* 品牌字：Sora（本地可变字重，仅用于 OfferiGo 字标） */
+@font-face {
+  font-family: 'Sora';
+  src: url('/fonts/sora-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+  --font-brand: 'Sora', 'Plus Jakarta Sans', 'Inter', sans-serif;
+
+  /* 中性色阶（冷调蓝灰） */
+  --color-bg: #f4f7fa;
+  --color-page-bg: #f4f7fa;
+  --color-surface: #ffffff;
+  --color-surface-muted: #eef3f6;
+  --color-nav: var(--color-surface);
+  --color-table-header: #ffffff;
+  --color-nav-active: var(--color-primary);
+  --color-nav-glider: var(--color-accent-soft);
+  --color-hotmatch-border: var(--color-accent);
+  --color-hotmatch-tint: #e6f2f4;
+  --color-text: #16202a;
+  --color-text-2: #4d5a66;
+  --color-text-3: #5f6c77;
+  --color-border: #dfe7ec;
+  --color-border-strong: #c9d6df;
+  --color-border-hover: #9fb4c0;
+
+  /* 主操作与强调：深青 */
+  --color-primary: #1f5f6b;
+  --color-primary-deep: #143f47;
+  --color-primary-mid: #1a5360;
+  --color-primary-light: #8fb3ba;
+  --color-primary-bg: #e6eff1;
+  --color-accent: #1f5f6b;
+  --color-accent-soft: #e6eff1;
+
+  /* 语义色 */
+  --color-danger: #b42318;
+  --color-danger-bg: #fdf0ef;
+  --color-danger-fill: #b42318;
+  --color-success: #177a4c;
+  --color-success-bg: #eaf6ef;
+  --color-warning: #b45309;
+  --color-warning-bg: #fdf6e8;
+  --color-info: #5f6c77;
+
+  /* 统一操作按钮：沿用品牌深青，不引入新色 */
+  --color-action: var(--color-primary);
+  --color-action-hover: var(--color-primary-mid);
+  --color-action-active: var(--color-primary-deep);
+  --color-action-light: var(--color-primary-light);
+  --color-action-text: #ffffff;
+  --color-link-hover: var(--color-primary-deep);
+
+  /* 排版 */
+  --font-base: 14px;
+  --font-sm: 12px;
+  --font-lg: 16px;
+  --font-xl: 22px;
+  --font-display: 'Plus Jakarta Sans', 'Noto Sans SC', 'Helvetica Neue', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  /* 间距（4px 基准） */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* 圆角：控件 6 / 卡片 10 / 大面板 14 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* 阴影：浮层与 hover 使用 */
+  --shadow-sm: 0 1px 2px rgba(21, 36, 43, 0.05);
+  --shadow-md: 0 6px 18px rgba(21, 36, 43, 0.08);
+  --shadow-lg: 0 16px 40px rgba(21, 36, 43, 0.14);
+  --shadow-hover: 0 10px 28px rgba(21, 36, 43, 0.1);
+  --shadow-teal: 0 6px 18px rgba(31, 95, 107, 0.18);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* ============================================================
+   暗色主题：只覆盖令牌，组件和页面通过变量自动适配
+   ============================================================ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #0d0d0d;
+  --color-page-bg: #0d0d0d;
+  --color-nav: #141414;
+  --color-surface: #1b1b1b;
+  --color-surface-muted: #232323;
+  --color-text: #f2f2f2;
+  --color-text-2: #a8a8a8;
+  --color-text-3: #7a7a7a;
+  --color-border: #2b2b2b;
+  --color-border-strong: #3b3b3b;
+  --color-border-hover: #4b4b4b;
+  --color-table-header: #171717;
+  --color-nav-active: var(--color-text);
+  --color-nav-glider: #262626;
+  --color-hotmatch-border: var(--color-primary-light);
+  --color-hotmatch-tint: #1a2a2b;
+
+  /* 文字/链接用清爽青，实心按钮用更深的 action，保证白字对比度 */
+  --color-primary: #5ec8d6;
+  --color-primary-deep: #2f7d76;
+  --color-primary-mid: #3a8f87;
+  --color-primary-light: #8adbe5;
+  --color-primary-bg: #262626;
+  --color-accent: #5ec8d6;
+  --color-accent-soft: #262626;
+
+  --color-danger: #e06c62;
+  --color-danger-bg: #2a1818;
+  --color-danger-fill: #a83a34;
+  --color-success: #62c98e;
+  --color-success-bg: #16231b;
+  --color-warning: #e0b25f;
+  --color-warning-bg: #2a2316;
+  --color-info: #9a9a9a;
+
+  --color-action: #ededed;
+  --color-action-hover: #ffffff;
+  --color-action-active: #d6d6d6;
+  --color-action-light: #5ec8d6;
+  --color-action-text: #0d0d0d;
+  --color-link-hover: #8adbe5;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --shadow-hover: 0 10px 28px rgba(0, 0, 0, 0.45);
+  --shadow-teal: 0 6px 18px rgba(0, 0, 0, 0.45);
+
+  /* Element Plus 变量覆盖 */
+  --el-bg-color: var(--color-surface);
+  --el-bg-color-page: var(--color-page-bg);
+  --el-bg-color-overlay: var(--color-surface);
+  --el-fill-color-blank: var(--color-surface);
+  --el-fill-color-light: var(--color-surface-muted);
+  --el-fill-color-lighter: var(--color-surface-muted);
+  --el-fill-color: var(--color-surface-muted);
+  --el-text-color-primary: var(--color-text);
+  --el-text-color-regular: var(--color-text-2);
+  --el-text-color-secondary: var(--color-text-3);
+  --el-text-color-placeholder: var(--color-text-3);
+  --el-text-color-disabled: var(--color-text-3);
+  --el-border-color: var(--color-border);
+  --el-border-color-light: var(--color-border);
+  --el-border-color-lighter: var(--color-border);
+  --el-border-color-extra-light: var(--color-border);
+  --el-border-color-darker: var(--color-border-strong);
+  --el-disabled-bg-color: var(--color-surface-muted);
+  --el-disabled-text-color: var(--color-text-3);
+  --el-disabled-border-color: var(--color-border);
+  --el-box-shadow-light: var(--shadow-lg);
+  --el-box-shadow: var(--shadow-lg);
+  --el-mask-color: rgba(0, 0, 0, 0.65);
+
+  --el-input-bg-color: var(--color-surface);
+  --el-input-text-color: var(--color-text);
+  --el-input-placeholder-color: var(--color-text-3);
+  --el-input-border-color: var(--color-border-strong);
+  --el-input-hover-border-color: var(--color-primary-light);
+  --el-input-focus-border-color: var(--color-primary);
+
+  --el-table-header-bg-color: var(--color-table-header);
+  --el-table-header-text-color: var(--color-text-3);
+  --el-table-bg-color: var(--color-surface);
+  --el-table-tr-bg-color: var(--color-surface);
+  --el-table-row-hover-bg-color: var(--color-surface-muted);
+  --el-table-border-color: var(--color-border);
+  --el-table-current-row-bg-color: var(--color-surface-muted);
+
+  --el-dialog-bg-color: var(--color-surface);
+
+  --el-color-primary: var(--color-primary);
+  --el-color-primary-dark-2: var(--color-primary-deep);
+  --el-color-primary-light-3: #4aa7b4;
+  --el-color-primary-light-5: #3a7f8b;
+  --el-color-primary-light-7: #2a4a52;
+  --el-color-primary-light-8: #223b42;
+  --el-color-primary-light-9: var(--color-primary-bg);
+  --el-color-danger: var(--color-danger);
+  --el-color-error: var(--color-danger);
+  --el-color-error-light-9: var(--color-danger-bg);
+  --el-color-error-light-8: #3a1c1e;
+  --el-color-success: var(--color-success);
+  --el-color-success-light-9: var(--color-success-bg);
+  --el-color-warning: var(--color-warning);
+  --el-color-warning-light-9: var(--color-warning-bg);
+  --el-color-info: var(--color-info);
+}
+
+/* ---------- 复用类 ---------- */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-6);
+  box-sizing: border-box;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+.page-header .page-title {
+  margin: 0;
+  font-size: var(--font-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+.page-header .page-subtitle {
+  margin: var(--space-1) 0 0;
+  font-size: 13px;
+  color: var(--color-text-2);
+}
+.page-header .page-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+}
+.panel-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.panel-sub {
+  margin: 0 0 var(--space-3);
+  font-size: 13px;
+  color: var(--color-text-2);
+}
+
+.muted {
+  color: var(--color-text-2);
+}
+
+/* 表格空状态：一句引导 + 下一步按钮 */
+.table-empty {
+  padding: 28px 0;
+  text-align: center;
+  color: var(--color-text-3);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.table-empty p {
+  margin: 0 0 10px;
+}
+
+/* 数字与展示标题 */
+.page-title,
+.panel-title,
+.section-title,
+.score-num,
+.rank-score,
+.dim-score,
+.insight-score,
+.rd-score-num,
+.rd-dim-score,
+.display-num {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 基础细节 ---------- */
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background: rgba(31, 95, 107, 0.18);
+  color: var(--color-primary-deep);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c9d6df transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-3);
+  background-clip: content-box;
+}
+
+/* ---------- 滚动入场 ---------- */
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  will-change: opacity, transform;
+}
+.reveal.is-revealed {
+  opacity: 1;
+  transform: none;
+  animation: reveal-in 0.5s var(--ease-out-expo) backwards;
+}
+/* 路由切换后的首屏元素：直接呈现，不播放入场上浮 */
+.reveal.is-revealed.is-instant {
+  animation: none;
+}
+
+/* ---------- 路由切换 ---------- */
+/* 旧页在上层原地淡出，新页已经在下面就位：相当于交叉淡化，没有中间空帧 */
+.page-leave-active {
+  transition: opacity 0.26s ease;
+}
+.page-leave-to {
+  opacity: 0;
+}
+.page-enter-active {
+  transition: none;
+}
+
+/* 部分组件复用：内容轻微浮起 */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 页面进入：标题单独上浮，卡片逐张落位（对齐岗位匹配页的入场节奏） */
+@keyframes page-title-rise {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes page-card-settle {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.988);
+    clip-path: inset(3% round 10px);
+  }
+  62% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    clip-path: inset(0 round 10px);
+  }
+}
+.page-title-anim {
+  animation: page-title-rise 0.54s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: 0.1s;
+}
+.page-card-anim {
+  animation: page-card-settle 0.74s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .page-title-anim,
+  .page-card-anim {
+    animation: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: var(--space-4);
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .page-header .page-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}

@@ -1,0 +1,69 @@
+/* ============================================================
+   卡片：白底 + 1px 描边，静止态无阴影
+   - hover 时轻微上浮并出现柔和阴影，作为交互反馈
+   ============================================================ */
+
+.el-card,
+.panel,
+.chart-card,
+.history-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s var(--ease-out-expo);
+}
+
+.el-card:hover,
+.panel:hover,
+.chart-card:hover,
+.history-panel:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
+
+.history-panel {
+  padding: var(--space-4);
+  box-sizing: border-box;
+}
+
+/* 可点击子卡片：反馈更明显一点 */
+.flow-step,
+.position-card,
+.report-lists .list-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s var(--ease-out-expo);
+}
+.flow-step:hover,
+.position-card:hover,
+.report-lists .list-card:hover {
+  border-color: #b7cbd5;
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-3px);
+}
+.flow-step:active,
+.position-card:active,
+.report-lists .list-card:active {
+  transform: translateY(-1px) scale(0.995);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .el-card:hover,
+  .panel:hover,
+  .chart-card:hover,
+  .history-panel:hover,
+  .flow-step:hover,
+  .position-card:hover,
+  .report-lists .list-card:hover {
+    transform: none;
+  }
+}

@@ -1,0 +1,199 @@
+/* ============================================================
+   统一按钮：深青主操作 + 白底描边次操作 + 文字链接
+   ============================================================ */
+
+.button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 34px;
+  padding: 0 14px;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-align: center;
+  color: var(--color-action-text);
+  background: var(--color-action);
+  border: 1px solid var(--color-action);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s var(--ease-out-expo);
+}
+.button svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+  flex-shrink: 0;
+  transition: transform 0.18s var(--ease-out-expo);
+}
+
+/* Lucide 是描边图标，按钮内不能沿用上面的 fill: currentColor */
+.button svg.lucide {
+  fill: none;
+}
+.button:hover {
+  background: var(--color-action-hover);
+  border-color: var(--color-action-hover);
+  color: var(--color-action-text);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-teal);
+}
+.button:hover svg {
+  transform: translateX(1px);
+}
+.button:active {
+  background: var(--color-action-active);
+  border-color: var(--color-action-active);
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
+}
+.button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.button:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 加载态 */
+.button.is-loading {
+  cursor: default;
+}
+.button.is-loading::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  opacity: 0.7;
+  animation: btn-spin 0.8s linear infinite;
+}
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- 变体 ---------- */
+.button--primary {
+  background: var(--color-action);
+  border-color: var(--color-action);
+  color: var(--color-action-text);
+}
+.button--default,
+.button--plain {
+  background: var(--color-surface);
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+.button--default:hover,
+.button--plain:hover {
+  background: var(--color-surface-muted);
+  border-color: var(--color-border-hover);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}
+.button--danger:not(.button--link) {
+  background: var(--color-surface);
+  border-color: #f2c9c4;
+  color: var(--color-danger);
+}
+.button--danger:not(.button--link):hover {
+  background: var(--color-danger-bg);
+  border-color: #e7aca5;
+  color: var(--color-danger);
+}
+.button--success:not(.button--link) {
+  background: var(--color-surface);
+  border-color: #c9e8d7;
+  color: var(--color-success);
+}
+.button--success:not(.button--link):hover {
+  background: var(--color-success-bg);
+  border-color: #a8d8bf;
+  color: var(--color-success);
+}
+.button--warning:not(.button--link) {
+  background: var(--color-surface);
+  border-color: #f0d9a8;
+  color: var(--color-warning);
+}
+.button--warning:not(.button--link):hover {
+  background: var(--color-warning-bg);
+  border-color: #e7c886;
+  color: var(--color-warning);
+}
+.button--info:not(.button--link) {
+  background: var(--color-surface);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-2);
+}
+
+/* 文字链接 */
+.button--link {
+  height: auto;
+  padding: 2px 4px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-accent);
+  font-weight: 500;
+}
+.button--link:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-link-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transform: none;
+  box-shadow: none;
+}
+.button--link.button--danger {
+  color: var(--color-danger);
+}
+.button--link.button--danger:hover {
+  color: #8f1a12;
+}
+.button--link.button--success {
+  color: var(--color-success);
+}
+
+/* 表格查看等中性操作：浅灰，hover 提亮 */
+.button--link.button--link-muted {
+  color: var(--color-text-2);
+}
+.button--link.button--link-muted:hover {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+/* 尺寸 */
+.button--small {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.button--large {
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+}
+.button--circle {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+}
