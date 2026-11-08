@@ -7,23 +7,23 @@
       </div>
     </div>
 
-    <!-- 用户信息 -->
+    <!-- 账户信息：头像与证件照并排，减少首屏纵向堆叠 -->
     <el-card shadow="never" class="user-card page-card-anim" style="animation-delay: 0.02s">
-      <div class="user-row">
-        <img class="user-avatar" :src="userStore.userInfo?.avatar || '/default-avatar.svg'" alt="头像" />
-        <div class="user-meta">
-          <div class="user-name">{{ userStore.userInfo?.username || '—' }}</div>
-          <button class="button button--small button--plain user-avatar-btn" @click="avatarVisible = true">更换头像</button>
+      <div class="account-grid">
+        <div class="account-profile">
+          <img class="user-avatar" :src="userStore.userInfo?.avatar || '/default-avatar.svg'" alt="头像" />
+          <div class="user-meta">
+            <div class="user-name">{{ userStore.userInfo?.username || '—' }}</div>
+            <button class="button button--small button--plain user-avatar-btn" @click="avatarVisible = true">更换头像</button>
+          </div>
+        </div>
+        <div class="account-photo">
+          <div class="account-photo-title">证件照</div>
+          <PhotoEditor :photo="userStore.photo" @change="onPhotoChange" />
         </div>
       </div>
     </el-card>
     <AvatarDialog v-model="avatarVisible" />
-
-    <!-- 证件照（从导航栏迁移到个人中心） -->
-    <el-card shadow="never" class="photo-card page-card-anim" style="animation-delay: 0.08s">
-      <template #header>证件照</template>
-      <PhotoEditor :photo="userStore.photo" @change="onPhotoChange" />
-    </el-card>
 
     <!-- 历史数据管理 -->
     <el-card shadow="never" class="page-card-anim" style="animation-delay: 0.14s">
@@ -719,6 +719,29 @@ onUnmounted(() => {
 .user-card {
   margin-bottom: 16px;
 }
+.account-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.account-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.account-photo-title {
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+@media (max-width: 900px) {
+  .account-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
 /* 错题操作：同尺寸胶囊按钮 */
 .row-actions {
   display: inline-flex;
@@ -931,5 +954,24 @@ onUnmounted(() => {
   padding-top: 6px;
   font-size: 13px;
   color: var(--color-text-3);
+}
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 16px;
+  }
+  .toolbar {
+    flex-wrap: wrap;
+  }
+  .toolbar :deep(.el-input),
+  .toolbar :deep(.el-select),
+  .toolbar :deep(.el-date-editor) {
+    width: 100% !important;
+  }
+  .app-follow-setting {
+    flex-wrap: wrap;
+  }
+  :deep(.el-dialog) {
+    width: 92vw !important;
+  }
 }
 </style>

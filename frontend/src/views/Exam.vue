@@ -1008,4 +1008,24 @@ function difficultyLabel(d) {
   flex: 1;
   min-width: 240px;
 }
+@media (max-width: 768px) {
+  .exam-page {
+    padding: 16px;
+  }
+  .settings-head {
+    align-items: flex-start;
+  }
+  .setting-line {
+    gap: 10px 12px;
+  }
+  .setting-block {
+    flex-wrap: wrap;
+  }
+  .setting-line--knowledge .knowledge-block {
+    min-width: 0;
+  }
+  :deep(.el-dialog) {
+    width: 92vw !important;
+  }
+}
 </style>

@@ -29,8 +29,10 @@ defineEmits(['click'])
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
+  height: 34px;
+  padding: 0 14px;
   gap: 6px;
-  padding: 6px 16px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: var(--color-action);
