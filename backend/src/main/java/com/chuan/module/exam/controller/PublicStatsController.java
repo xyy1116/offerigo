@@ -38,8 +38,13 @@ public class PublicStatsController {
         if (cache == null || now - cachedAt > CACHE_TTL_MS) {
             synchronized (this) {
                 if (cache == null || now - cachedAt > CACHE_TTL_MS) {
-                    cache = compute();
-                    cachedAt = System.currentTimeMillis();
+                    PublicStatsVO fresh = compute();
+                    // 启动早期可能出现空表：0 值不缓存，下次请求重新统计
+                    if (fresh.getQuestionCount() != null && fresh.getQuestionCount() > 0) {
+                        cache = fresh;
+                        cachedAt = System.currentTimeMillis();
+                    }
+                    return Result.success(fresh);
                 }
             }
         }
