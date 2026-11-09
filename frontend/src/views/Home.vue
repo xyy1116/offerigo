@@ -1,5 +1,5 @@
 <template>
-  <div class="home-body">
+  <div class="home-body" :class="{ 'is-leaving': leaving }">
     <!-- ======================= 1. Hero ======================= -->
     <section class="hero" aria-label="OfferiGo 智能求职助手">
       <div ref="heroParallaxRef" class="hero-parallax" role="img"
@@ -31,207 +31,61 @@
           每日推荐岗位，AI 匹配评估、定制文书、模拟面试与笔试训练，一站式求职准备。
         </p>
         <div class="hero-actions">
-          <button class="hero-btn hero-btn--primary" @click="go('/jobmatch')">立即体验</button>
-          <button class="hero-btn hero-btn--ghost" @click="overviewVisible = true">使用指南</button>
-        </div>
-      </div>
-      <button class="hero-scroll" aria-label="向下滚动" @click="scrollToWorkflow">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
-          <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      </button>
-    </section>
-
-    <!-- ============ 2. 痛点 + 时间线 + 功能入口 ============ -->
-    <section class="workflow">
-      <div class="pain" v-reveal.repeat>
-        <span class="section-eyebrow">求职工作流</span>
-        <h2 class="section-title">毕业生的求职困境</h2>
-        <p class="pain-text">
-          绝大多数毕业生从一张空白简历起步，既不知如何把零散的经历整理成
-          能通过筛选的简历，也常常对决定成败的面试与笔试准备不足。
-        </p>
-        <ul class="pain-tags">
-          <li>简历盲区</li>
-          <li>简历与 JD 不匹配</li>
-          <li>面试紧张</li>
-          <li>笔试准备不足</li>
-        </ul>
-      </div>
-
-      <div class="timeline" v-reveal.repeat="60">
-        <div class="timeline-rail"></div>
-        <div
-          v-for="(s, i) in steps"
-          :key="s.path"
-          class="timeline-node"
-          :class="{ active: isActive(s.path) }"
-          role="button"
-          tabindex="0"
-          @click="go(s.path)"
-          @keydown.enter="go(s.path)"
-          @keydown.space.prevent="go(s.path)"
-        >
-          <div class="timeline-dot">{{ i + 1 }}</div>
-          <div class="timeline-label">{{ s.label }}</div>
-        </div>
-      </div>
-
-      <div class="functions" v-reveal.repeat="100">
-        <article
-          v-for="f in functions"
-          :key="f.path"
-          class="func"
-          role="button"
-          tabindex="0"
-          @click="go(f.path)"
-          @keydown.enter="go(f.path)"
-          @keydown.space.prevent="go(f.path)"
-        >
-          <div class="func-icon"><el-icon :size="26"><component :is="f.icon" /></el-icon></div>
-          <h3 class="func-title">{{ f.title }}</h3>
-          <p class="func-desc">{{ f.desc }}</p>
-          <span class="func-link">进入模块 <el-icon><Right /></el-icon></span>
-        </article>
-      </div>
-    </section>
-
-    <!-- ======================= 3. 数据统计 ======================= -->
-    <section ref="statsRef" class="stats" v-reveal.repeat>
-      <div class="stats-inner">
-        <div v-for="(s, i) in stats" :key="s.label" class="stat">
-          <div class="stat-value">
-            <span class="stat-num">{{ displayed[i] }}</span>{{ s.suffix }}
-          </div>
-          <div class="stat-label">{{ s.label }}</div>
+          <button class="hero-btn hero-btn--primary" @click="finish">立即体验</button>
         </div>
       </div>
     </section>
-
-    <!-- ================= 4. 技术亮点 ================= -->
-    <section class="tech" v-reveal.repeat="60">
-      <div class="tech-inner">
-        <span class="section-eyebrow">能力矩阵</span>
-        <h2 class="tech-title">平台核心优势</h2>
-        <div class="tech-tags">
-          <div v-for="t in techs" :key="t.name" class="tech-tag">
-            <div class="tech-tag-icon"><el-icon :size="20"><component :is="t.icon" /></el-icon></div>
-            <span class="tech-tag-name">{{ t.name }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 使用指南弹窗 -->
-    <el-dialog v-model="overviewVisible" title="使用指南" width="620px" align-center>
-      <div class="guide">
-        <p class="guide-intro">
-          覆盖求职全流程的 AI 工作台：从简历素材、岗位推荐与匹配，到定制文书、模拟面试、笔试训练和投递跟进，一个平台完成。
-        </p>
-        <h4 class="guide-heading">七大模块</h4>
-        <ol class="guide-steps">
-          <li><strong>简历素材库</strong>：集中管理基础信息、教育、项目、实习、技能与证书；支持导入简历、AI 拆分长文本，素材一处更新，全站生效。</li>
-          <li><strong>岗位获取与收藏</strong>：每日 08:00 推送匹配岗位 TOP10；支持粘贴、链接、文档、截图导入；收藏的岗位就是你的匹配岗位池。</li>
-          <li><strong>匹配评估</strong>：技能、经历、学历、契合四维量化打分，列出匹配优势与待补足项，每条结论都能追溯到简历素材；90 分以上岗位高亮提示。</li>
-          <li><strong>定制文书</strong>：选择模板、上传证件照，按岗位生成定制简历与求职信，支持 PDF / Word 导出，可随素材迭代反复优化。</li>
-          <li><strong>AI 模拟面试</strong>：基于岗位 JD 定向提问、语音作答，结束后生成多维面试报告，历史记录可回看复盘。</li>
-          <li><strong>AI 笔试助手</strong>：按岗位匹配真题，支持自由练习与限时模拟；错题自动归档，可重做、标记掌握，题库每日更新。</li>
-          <li><strong>投递与跟进</strong>：投递记录进入个人中心台账，可上传归档当次简历、维护状态并设置跟进提醒；面试、笔试、错题记录统一管理。</li>
-        </ol>
-        <p class="guide-tip">
-          温馨提示：匹配评估、文书生成、模拟面试、笔试与投递台账需要登录后使用；素材与记录保存在你的账号下。
-        </p>
-      </div>
-      <template #footer>
-        <button class="btn btn--primary" @click="overviewVisible = false">关闭</button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onBeforeUnmount, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  Right,
-  Aim,
-  Microphone,
-  EditPen,
-  Connection,
-  Lock,
-  DataAnalysis
-} from '@element-plus/icons-vue'
+import { getToken } from '@/utils/token'
+import { markIntroDone } from '@/router'
 
 const route = useRoute()
 const router = useRouter()
+const leaving = ref(false)
+const heroParallaxRef = ref(null)
 
-const overviewVisible = ref(false)
-const statsRef = ref()
+let timer = null
+let finished = false
 
-const steps = [
-  { label: '智能岗位匹配', path: '/jobmatch' },
-  { label: 'AI 语音模拟面试', path: '/interview' },
-  { label: '岗位定向笔试训练', path: '/exam' }
-]
-
-const functions = [
-  {
-    title: '智能岗位匹配',
-    path: '/jobmatch',
-    icon: Aim,
-    desc: '投喂个人信息与目标岗位，AI 综合打分并智能排名。'
-  },
-  {
-    title: 'AI 语音面试',
-    path: '/interview',
-    icon: Microphone,
-    desc: '与 AI 面试官进行语音模拟面试，还原真实场景。'
-  },
-  {
-    title: '笔试训练',
-    path: '/exam',
-    icon: EditPen,
-    desc: '岗位定向组卷训练，错题自动归档、随时巩固。'
-  }
-]
-
-const stats = [
-  { label: '累计完成简历分析', value: 1280, suffix: '+' },
-  { label: 'AI 模拟面试场次', value: 760, suffix: '+' },
-  { label: '简历优化建议', value: 3600, suffix: '+' },
-  { label: '专项题库条目', value: 2100, suffix: '+' }
-]
-const displayed = ref(stats.map(() => 0))
-
-const techs = [
-  { name: '岗位定向AI分析', icon: Aim },
-  { name: '完整求职链路服务', icon: Connection },
-  { name: '个人简历数据安全保护', icon: Lock },
-  { name: '求职练习过程数据留存', icon: DataAnalysis }
-]
-
-const stack = [
-  { name: 'Vue 3', desc: '响应式单页应用，结合 Element Plus 组件库，PC 优先的现代界面。' },
-  { name: 'Spring Boot', desc: 'RESTful 后端服务，JWT 鉴权、分层架构与 OSS 对象存储。' },
-  { name: 'MySQL', desc: '关系型数据库，持久化用户、简历、面试与笔试记录。' },
-  { name: 'DashScope LLM', desc: '驱动简历分析、语音面试与岗位定向出题。' }
-]
-
-function isActive(path) {
-  return route.path === path || route.path.startsWith(path + '/')
+function targetPath() {
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+  return redirect && redirect.startsWith('/') && redirect !== '/' ? redirect : '/jobmatch'
 }
 
-function go(path) {
-  router.push(path)
+function finish() {
+  if (finished) return
+  finished = true
+  clearTimeout(timer)
+  unbindSkip()
+  leaving.value = true
+  window.setTimeout(() => {
+    markIntroDone()
+    if (getToken()) {
+      router.replace(targetPath())
+    } else {
+      router.replace({ path: '/', query: { login: '1', redirect: targetPath() } })
+    }
+  }, 420)
 }
 
-function scrollToWorkflow() {
-  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  document.querySelector('.workflow')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+const onSkip = () => finish()
+function bindSkip() {
+  window.addEventListener('pointerdown', onSkip, { passive: true })
+  window.addEventListener('wheel', onSkip, { passive: true })
+  window.addEventListener('keydown', onSkip)
+}
+function unbindSkip() {
+  window.removeEventListener('pointerdown', onSkip)
+  window.removeEventListener('wheel', onSkip)
+  window.removeEventListener('keydown', onSkip)
 }
 
 // Hero 背景随鼠标缓慢反向漂移：滞后的 lerp 让画面像沉在水里
-const heroParallaxRef = ref(null)
 let parallaxRaf = 0
 let px = 0
 let py = 0
@@ -280,49 +134,18 @@ function initHeroParallax() {
   }
 }
 
-onMounted(initHeroParallax)
-
-onBeforeUnmount(() => {
-  if (cleanupParallax) cleanupParallax()
+onMounted(() => {
+  initHeroParallax()
+  // 已进入登录流程（带 login=1）时不自动跳转，等登录完成
+  if (route.query.login) return
+  timer = window.setTimeout(finish, 3000)
+  bindSkip()
 })
 
-function openLogin() {
-  router.push({ path: '/', query: { login: '1' } })
-}
-
-
-let statsTriggered = false
-function runStats() {
-  const start = performance.now()
-  const duration = 1600
-  function tick(now) {
-    const p = Math.min(1, (now - start) / duration)
-    const eased = 1 - Math.pow(1 - p, 3) // easeOutCubic
-    stats.forEach((s, i) => {
-      displayed.value[i] = Math.round(s.value * eased)
-    })
-    if (p < 1) requestAnimationFrame(tick)
-  }
-  requestAnimationFrame(tick)
-}
-
-onMounted(() => {
-  // 尊重「减少动态效果」：直接显示最终数值，不播放数字滚动
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    displayed.value = stats.map((s) => s.value)
-    return
-  }
-  const observer = new IntersectionObserver(
-    (entries) => {
-      if (entries.some((e) => e.isIntersecting) && !statsTriggered) {
-        statsTriggered = true
-        runStats()
-        observer.disconnect()
-      }
-    },
-    { threshold: 0.3 }
-  )
-  if (statsRef.value) observer.observe(statsRef.value)
+onBeforeUnmount(() => {
+  clearTimeout(timer)
+  unbindSkip()
+  if (cleanupParallax) cleanupParallax()
 })
 </script>
 
@@ -331,12 +154,19 @@ onMounted(() => {
   --ink: var(--color-text);
   --body-c: var(--color-text-2);
   --muted: var(--color-text-3);
+  min-height: 100vh;
   background: var(--color-page-bg);
   color: var(--body-c);
   line-height: 1.6;
   padding-bottom: 0;
   /* 头部 fixed 后内容区预留了 56px；hero 顶上去铺满视口，由透明头部叠在上面 */
   margin-top: -56px;
+  transform-origin: 50% 42%;
+  transition: transform 0.42s var(--ease-out-expo), opacity 0.42s ease;
+}
+.home-body.is-leaving {
+  transform: scale(0.94);
+  opacity: 0;
 }
 
 /* ===== Hero ===== */

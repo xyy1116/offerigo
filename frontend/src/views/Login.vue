@@ -200,7 +200,7 @@ async function handleLogin() {
       rememberMe: loginForm.rememberMe
     })
     ElMessage.success('登录成功')
-    router.push(route.query.redirect || '/')
+    router.push(route.query.redirect || '/jobmatch')
   } catch (e) {
     loadCaptcha()
   } finally {

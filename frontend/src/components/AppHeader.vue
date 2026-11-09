@@ -1,22 +1,25 @@
 <template>
   <header class="app-header" :class="{ 'is-overlay': overlay }">
     <div class="header-inner">
-      <button class="brand" @click="$router.push('/')">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 32 32">
-            <path
-              d="M5 14.8 27 6l-6.1 20.9-7-7.6L5 14.8Z"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.3"
-              stroke-linejoin="round"
-            />
-            <path d="M13.9 19.3 27 6" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round" />
-          </svg>
-        </span>
-        <span class="brand-name">Offeri<span class="brand-go">Go</span></span>
-        <span class="brand-sub">智能求职助手</span>
-      </button>
+      <div class="header-left">
+        <button class="brand" @click="$router.push('/jobmatch')">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32">
+              <path
+                d="M5 14.8 27 6l-6.1 20.9-7-7.6L5 14.8Z"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.3"
+                stroke-linejoin="round"
+              />
+              <path d="M13.9 19.3 27 6" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <span class="brand-name">Offeri<span class="brand-go">Go</span></span>
+          <span class="brand-sub">智能求职助手</span>
+        </button>
+        <button type="button" class="guide-entry" @click="guideRef?.open()">使用指南</button>
+      </div>
 
       <nav class="nav" :class="{ open: menuOpen }">
         <span class="nav-glider" :style="gliderStyle" aria-hidden="true"></span>
@@ -80,6 +83,7 @@
   </header>
 
   <LoginDialog v-if="loginVisible" v-model="loginVisible" />
+  <GuideDialog ref="guideRef" />
 </template>
 
 <script setup>
@@ -90,6 +94,7 @@ import { Close, Menu } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getBankVersion } from '@/api/exam'
 import LoginDialog from '@/views/Login.vue'
+import GuideDialog from '@/components/GuideDialog.vue'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 
 const route = useRoute()
@@ -98,6 +103,7 @@ const userStore = useUserStore()
 
 const menuOpen = ref(false)
 const loginVisible = ref(false)
+const guideRef = ref(null)
 
 // 首页：头部叠在 hero 上透明显示；滚过 hero 后切回实心，避免浅色内容上白字看不清
 const isHome = ref(route.path === '/')
@@ -219,7 +225,6 @@ watch(() => route.path, (path) => {
 })
 
 const navs = [
-  { name: '首页', path: '/' },
   { name: '智能岗位匹配', path: '/jobmatch' },
   { name: 'AI 面试官', path: '/interview' },
   { name: 'AI 笔试助手', path: '/exam' }
@@ -386,6 +391,36 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+/* 左上角 logo 右侧的使用指南入口 */
+.guide-entry {
+  flex: none;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-2);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.18s ease, background-color 0.18s ease;
+}
+.guide-entry:hover {
+  color: var(--color-primary);
+  background: var(--color-surface-muted);
+}
+.app-header.is-overlay .guide-entry {
+  color: rgba(255, 255, 255, 0.86);
+}
+.app-header.is-overlay .guide-entry:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
 }
 .brand {
   display: flex;
