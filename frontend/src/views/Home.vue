@@ -24,12 +24,13 @@
       <div class="hero-scrim" aria-hidden="true"></div>
       <div class="hero-copy">
         <h1 class="hero-title">
-          <span class="hero-line"><span class="hero-rise">从简历素材出发，</span></span>
-          <span class="hero-line"><span class="hero-rise hero-title-accent">找到更匹配的岗位。</span></span>
+          <span class="hero-line"><span class="hero-rise">让每一次投递，</span></span>
+          <span class="hero-line"><span class="hero-rise hero-title-accent">都更有把握。</span></span>
         </h1>
         <p class="hero-sub">
-          以简历素材为基础，AI 对标岗位做匹配评估，<br />
-          定制文书、模拟面试、笔试冲刺，让求职准备更有方向。
+          每日推荐优质岗位，AI 做匹配评估，按岗位定制文书，<br />
+          模拟面试、笔试训练到投递跟进——一站式求职准备，<br />
+          让你把时间花在更值得的地方。
         </p>
         <div class="hero-actions">
           <button class="hero-btn hero-btn--primary" @click="go('/jobmatch')">立即体验</button>
