@@ -275,13 +275,12 @@ public class ExamQuestionBankService {
                 codingRequired, codingTarget, false).size();
     }
 
+    /** 每次后端启动生成一次，作为前端"题库已更新"HOT 提示的版本号。 */
+    private final String runVersion = String.valueOf(System.currentTimeMillis());
+
     public BankVersionVO version() {
-        // 版本取“最新一题入库时间”：只有真正新增题目才变化，避免每日空跑也触发 HOT
-        ExamQuestionBank latest = bankMapper.selectOne(new LambdaQueryWrapper<ExamQuestionBank>()
-                .orderByDesc(ExamQuestionBank::getCreateTime).last("limit 1"));
         BankVersionVO vo = new BankVersionVO();
-        vo.setVersion(latest != null && latest.getCreateTime() != null
-                ? latest.getCreateTime().toString() : "");
+        vo.setVersion(runVersion);
         Long count = bankMapper.selectCount(null);
         vo.setCount(count == null ? 0L : count);
         return vo;
