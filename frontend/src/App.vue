@@ -70,15 +70,8 @@ body,
   flex: 1;
   min-height: 0;
   overflow: auto;
-  background-color: var(--color-bg);
-  background-image:
-    radial-gradient(55% 45% at 12% 6%, var(--bg-glow-1), transparent 62%),
-    radial-gradient(50% 42% at 88% 2%, var(--bg-glow-2), transparent 60%),
-    radial-gradient(48% 42% at 68% 92%, var(--bg-glow-3), transparent 65%);
-  background-repeat: no-repeat;
-  background-size: 140% 140%;
-  background-position: 0% 0%, 100% 0%, 50% 100%;
-  animation: canvas-drift 26s ease-in-out infinite alternate;
+  background: var(--bg-canvas);
+  background-attachment: fixed;
   /* 头部始终 fixed：内容区自留 56px，首页用负 margin 顶到头部下面，
      这样切换路由时页面不会因为头部进出文档流而上下跳 56px */
   padding-top: 56px;
@@ -88,17 +81,6 @@ body,
 /* 切到首页时内容区跟着 hero 一起变暗，淡入过程中不会先闪一帧浅色底 */
 .app-content.is-home {
   background: #04070d;
-  animation: none;
-}
-/* 背景光斑缓慢漂移，制造轻微的流动感 */
-@keyframes canvas-drift {
-  from { background-position: 0% 0%, 100% 0%, 50% 100%; }
-  to { background-position: 32% 16%, 68% 12%, 42% 72%; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .app-content {
-    animation: none;
-  }
 }
 /* 让首页的 -56px 负 margin 留在 shell 内部，避免离场固定时子元素再跳 56px */
 .page-shell {

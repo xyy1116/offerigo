@@ -124,6 +124,12 @@ public class JobCrawlTask {
     public void repairLegacyRequirementsOnStartup() {
         new Thread(() -> {
             try {
+                // 与当天补跑爬取错开：两个无头浏览器任务并发会互相干扰，且爬取结束后自己会补全
+                Thread.sleep(2000);
+                if (crawlLock.isLocked()) {
+                    log.info("岗位爬取进行中，跳过启动补全（爬取结束后会自动补全）");
+                    return;
+                }
                 normalizeStoredRequirements();
                 repairShortTargets();
                 repairShortCrawlJobs();
