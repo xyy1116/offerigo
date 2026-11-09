@@ -18,11 +18,11 @@ application-local.yml
 application-local.yaml
 .env
 .env.*
-!.env.example
 
 # IDE / 系统
 .idea/
 .vscode/
+.trae/
 *.iml
 .DS_Store
 Thumbs.db
