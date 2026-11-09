@@ -28,9 +28,7 @@
           <span class="hero-line"><span class="hero-rise hero-title-accent">都更有把握。</span></span>
         </h1>
         <p class="hero-sub">
-          每日推荐优质岗位，AI 做匹配评估，按岗位定制文书，<br />
-          模拟面试、笔试训练到投递跟进——一站式求职准备，<br />
-          让你把时间花在更值得的地方。
+          每日推荐岗位，AI 匹配评估、定制文书、模拟面试与笔试训练，一站式求职准备。
         </p>
         <div class="hero-actions">
           <button class="hero-btn hero-btn--primary" @click="go('/jobmatch')">立即体验</button>
@@ -128,19 +126,20 @@
     <el-dialog v-model="overviewVisible" title="使用指南" width="620px" align-center>
       <div class="guide">
         <p class="guide-intro">
-          欢迎使用 AI 智能求职助手。本平台面向所有 IT 行业求职者，一站式完成简历素材管理、岗位匹配、简历打磨、求职备考。
+          覆盖求职全流程的 AI 工作台：从简历素材、岗位推荐与匹配，到定制文书、模拟面试、笔试训练和投递跟进，一个平台完成。
         </p>
-        <h4 class="guide-heading">建议使用流程</h4>
+        <h4 class="guide-heading">七大模块</h4>
         <ol class="guide-steps">
-          <li>添加多条简历素材，录入多个目标岗位 JD，平台会对每一组素材与岗位做匹配分析</li>
-          <li>查看实时岗位评估打分，清晰看到匹配项、待补全项，按照 AI 提示补齐内容</li>
-          <li>挑选简历模板、上传证件照，预览效果，一键生成对应岗位的定制简历与求职信，支持导出 PDF / Word</li>
-          <li>根据岗位评估持续调整素材，反复迭代优化简历内容；也可获取各大第三方平台匹配岗位，跳转对应官方网站投递</li>
-          <li>进入 AI 模拟面试官模块，开展语音模拟面试，锻炼临场应答</li>
-          <li>使用 AI 笔试助手，进行岗位针对性笔试刷题训练</li>
+          <li><strong>简历素材库</strong>：集中管理基础信息、教育、项目、实习、技能与证书；支持导入简历、AI 拆分长文本，素材一处更新，全站生效。</li>
+          <li><strong>岗位获取与收藏</strong>：每日 08:00 推送匹配岗位 TOP10；支持粘贴、链接、文档、截图导入；收藏的岗位就是你的匹配岗位池。</li>
+          <li><strong>匹配评估</strong>：技能、经历、学历、契合四维量化打分，列出匹配优势与待补足项，每条结论都能追溯到简历素材；90 分以上岗位高亮提示。</li>
+          <li><strong>定制文书</strong>：选择模板、上传证件照，按岗位生成定制简历与求职信，支持 PDF / Word 导出，可随素材迭代反复优化。</li>
+          <li><strong>AI 模拟面试</strong>：基于岗位 JD 定向提问、语音作答，结束后生成多维面试报告，历史记录可回看复盘。</li>
+          <li><strong>AI 笔试助手</strong>：按岗位匹配真题，支持自由练习与限时模拟；错题自动归档，可重做、标记掌握，题库每日更新。</li>
+          <li><strong>投递与跟进</strong>：投递记录进入个人中心台账，可上传归档当次简历、维护状态并设置跟进提醒；面试、笔试、错题记录统一管理。</li>
         </ol>
         <p class="guide-tip">
-          温馨提示：岗位匹配评估、简历与求职信生成、AI 面试以及笔试训练功能需要登录账号之后才可以正常使用。
+          温馨提示：匹配评估、文书生成、模拟面试、笔试与投递台账需要登录后使用；素材与记录保存在你的账号下。
         </p>
       </div>
       <template #footer>
@@ -925,9 +924,16 @@ onMounted(() => {
 
 /* ===== Guide modal ===== */
 .guide {
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-right: 6px;
   font-size: 14px;
   color: var(--body-c);
   line-height: 1.7;
+}
+.guide-steps strong {
+  color: var(--color-text);
+  font-weight: 600;
 }
 .guide-intro {
   margin: 0 0 16px;
