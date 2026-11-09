@@ -1,5 +1,5 @@
 <template>
-  <div class="home-body" :class="{ 'is-leaving': leaving }">
+  <div ref="homeRef" class="home-body">
     <!-- ======================= 1. Hero ======================= -->
     <section class="hero" aria-label="OfferiGo 智能求职助手">
       <div ref="heroParallaxRef" class="hero-parallax" role="img"
@@ -31,8 +31,26 @@
           每日推荐岗位，AI 匹配评估、定制文书、模拟面试与笔试训练，一站式求职准备。
         </p>
         <div class="hero-actions">
-          <button class="hero-btn hero-btn--primary" @click="finish">立即体验</button>
+          <button class="hero-btn hero-btn--primary" @click="scrollToMatch">立即体验</button>
         </div>
+      </div>
+      <button type="button" class="hero-scroll" aria-label="下滑到智能岗位匹配" @click="scrollToMatch">
+        <span class="scroll-mouse" aria-hidden="true"><span class="scroll-wheel"></span></span>
+        <span class="scroll-chevrons" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7" /></svg>
+          <svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7" /></svg>
+        </span>
+      </button>
+    </section>
+
+    <!-- 第二屏：智能岗位匹配 -->
+    <section ref="matchSection" class="landing-match">
+      <JobMatch v-if="userStore.token" />
+      <div v-else class="match-login">
+        <p class="match-login-eyebrow">AI 智能岗位匹配</p>
+        <h2 class="match-login-title">登录后开始你的岗位匹配</h2>
+        <p class="match-login-sub">AI 会根据简历素材与收藏岗位做匹配评估，并生成定制简历、面试与笔试训练。</p>
+        <button class="button" @click="openLogin">登录 / 注册</button>
       </div>
     </section>
   </div>
@@ -41,48 +59,82 @@
 <script setup>
 import { ref, onBeforeUnmount, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getToken } from '@/utils/token'
-import { markIntroDone } from '@/router'
+import { useUserStore } from '@/stores/user'
+import JobMatch from '@/views/JobMatch.vue'
 
 const route = useRoute()
 const router = useRouter()
-const leaving = ref(false)
+const userStore = useUserStore()
+
+const matchSection = ref(null)
+const homeRef = ref(null)
 const heroParallaxRef = ref(null)
 
-let timer = null
-let finished = false
+let autoTimer = null
+let interacted = false
+let scrolledToMatch = false
+let scrollRaf = 0
+let scrollEl = null
 
-function targetPath() {
-  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
-  return redirect && redirect.startsWith('/') && redirect !== '/' ? redirect : '/jobmatch'
+const prefersReduced = () =>
+  window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+function clearAutoTimer() {
+  if (autoTimer) {
+    clearTimeout(autoTimer)
+    autoTimer = null
+  }
 }
 
-function finish() {
-  if (finished) return
-  finished = true
-  clearTimeout(timer)
-  unbindSkip()
-  leaving.value = true
-  window.setTimeout(() => {
-    markIntroDone()
-    if (getToken()) {
-      router.replace(targetPath())
-    } else {
-      router.replace({ path: '/', query: { login: '1', redirect: targetPath() } })
-    }
-  }, 420)
+function scrollToMatch() {
+  scrolledToMatch = true
+  clearAutoTimer()
+  const section = matchSection.value
+  const container = scrollEl || document.querySelector('.app-content')
+  if (!section) return
+  const behavior = prefersReduced() ? 'auto' : 'smooth'
+  if (container) {
+    const top = section.getBoundingClientRect().top + container.scrollTop - 56
+    container.scrollTo({ top: Math.max(0, top), behavior })
+  } else {
+    section.scrollIntoView({ behavior, block: 'start' })
+  }
 }
 
-const onSkip = () => finish()
-function bindSkip() {
-  window.addEventListener('pointerdown', onSkip, { passive: true })
-  window.addEventListener('wheel', onSkip, { passive: true })
-  window.addEventListener('keydown', onSkip)
+function onUserAction() {
+  interacted = true
+  clearAutoTimer()
 }
-function unbindSkip() {
-  window.removeEventListener('pointerdown', onSkip)
-  window.removeEventListener('wheel', onSkip)
-  window.removeEventListener('keydown', onSkip)
+
+function bindActions() {
+  const opts = { passive: true }
+  window.addEventListener('wheel', onUserAction, opts)
+  window.addEventListener('touchstart', onUserAction, opts)
+  window.addEventListener('pointerdown', onUserAction, opts)
+  window.addEventListener('keydown', onUserAction)
+}
+function unbindActions() {
+  window.removeEventListener('wheel', onUserAction)
+  window.removeEventListener('touchstart', onUserAction)
+  window.removeEventListener('pointerdown', onUserAction)
+  window.removeEventListener('keydown', onUserAction)
+}
+
+function openLogin() {
+  router.replace({ path: '/', query: { ...route.query, login: '1', redirect: '/' } })
+}
+
+// 分层视差：首屏滚动进度写入 CSS 变量，背景、标题、滚动球各自以不同速度移动
+function updateHeroProgress() {
+  scrollRaf = 0
+  if (!homeRef.value) return
+  const top = scrollEl ? scrollEl.scrollTop : window.scrollY
+  const h = window.innerHeight || 1
+  const progress = Math.max(0, Math.min(1, top / h))
+  homeRef.value.style.setProperty('--hp', progress.toFixed(3))
+}
+function onScroll() {
+  if (!scrollRaf) scrollRaf = requestAnimationFrame(updateHeroProgress)
 }
 
 // Hero 背景随鼠标缓慢反向漂移：滞后的 lerp 让画面像沉在水里
@@ -95,7 +147,7 @@ let cleanupParallax = null
 
 function initHeroParallax() {
   const el = heroParallaxRef.value
-  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const reduced = prefersReduced()
   const fine = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches
   if (!el || reduced || !fine) return
 
@@ -136,15 +188,21 @@ function initHeroParallax() {
 
 onMounted(() => {
   initHeroParallax()
-  // 已进入登录流程（带 login=1）时不自动跳转，等登录完成
-  if (route.query.login) return
-  timer = window.setTimeout(finish, 3000)
-  bindSkip()
+  scrollEl = document.querySelector('.app-content')
+  scrollEl?.addEventListener('scroll', onScroll, { passive: true })
+  updateHeroProgress()
+  bindActions()
+  // 进入页面 2 秒内没有任何操作时，自动下滑到岗位匹配
+  autoTimer = window.setTimeout(() => {
+    if (!interacted && !scrolledToMatch) scrollToMatch()
+  }, 2000)
 })
 
 onBeforeUnmount(() => {
-  clearTimeout(timer)
-  unbindSkip()
+  clearAutoTimer()
+  unbindActions()
+  scrollEl?.removeEventListener('scroll', onScroll)
+  if (scrollRaf) cancelAnimationFrame(scrollRaf)
   if (cleanupParallax) cleanupParallax()
 })
 </script>
@@ -161,12 +219,6 @@ onBeforeUnmount(() => {
   padding-bottom: 0;
   /* 头部 fixed 后内容区预留了 56px；hero 顶上去铺满视口，由透明头部叠在上面 */
   margin-top: -56px;
-  transform-origin: 50% 42%;
-  transition: transform 0.42s var(--ease-out-expo), opacity 0.42s ease;
-}
-.home-body.is-leaving {
-  transform: scale(0.94);
-  opacity: 0;
 }
 
 /* ===== Hero ===== */
@@ -195,7 +247,9 @@ onBeforeUnmount(() => {
   top: 50%;
   width: max(100vw, 177.78vh);
   height: max(100vh, 56.25vw);
-  transform: translate(-45.5%, -50%) scale(1.1);
+  transform: translate(-45.5%, -50%) scale(calc(1.1 + var(--hp, 0) * 0.06));
+  filter: blur(calc(var(--hp, 0) * 2px));
+  transition: filter 0.2s linear;
 }
 /* 呼吸感：极慢的推拉，避免一张死图 */
 .hero-bg,
@@ -231,6 +285,7 @@ onBeforeUnmount(() => {
 .hero-scrim {
   position: absolute;
   inset: 0;
+  opacity: calc(1 - var(--hp, 0) * 0.35);
   background:
     linear-gradient(90deg, rgba(4, 7, 13, 0.9) 0%, rgba(4, 7, 13, 0.66) 30%,
       rgba(4, 7, 13, 0.18) 56%, rgba(4, 7, 13, 0) 76%),
@@ -242,7 +297,8 @@ onBeforeUnmount(() => {
   top: 50%;
   width: min(720px, 46vw);
   padding-left: clamp(24px, 8.2vw, 118px);
-  transform: translateY(-50%);
+  transform: translateY(calc(-50% + var(--hp, 0) * -36px));
+  opacity: calc(1 - var(--hp, 0) * 1.15);
   color: #fff;
 }
 .hero-title {
@@ -320,43 +376,119 @@ onBeforeUnmount(() => {
   border-color: rgba(255, 255, 255, 0.5);
   color: #ffffff;
 }
+/* 底部下滑提示：玻璃质感鼠标 + 双层箭头，随滚动淡出下沉 */
 .hero-scroll {
   position: absolute;
-  bottom: clamp(14px, 2.4vh, 26px);
+  bottom: clamp(16px, 2.8vh, 30px);
   left: 50%;
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
+  gap: 6px;
+  padding: 0;
   border: 0;
-  border-radius: 999px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
-  transform: translateX(-50%);
-  transition: color 0.2s ease, background-color 0.2s ease;
-  animation: heroHint 2.8s ease-in-out infinite;
+  transform: translate(-50%, calc(var(--hp, 0) * 18px));
+  opacity: calc(1 - var(--hp, 0) * 2);
+  transition: color 0.2s ease;
 }
 .hero-scroll:hover {
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
 }
-.hero-scroll svg {
-  width: 20px;
-  height: 20px;
+.scroll-mouse {
+  position: relative;
+  display: block;
+  width: 24px;
+  height: 36px;
+  border: 1.5px solid currentColor;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.05), 0 8px 24px rgba(0, 0, 0, 0.25);
 }
-@keyframes heroHint {
-  0%,
-  100% {
-    opacity: 0.45;
-    transform: translate(-50%, 0);
-  }
-  50% {
-    opacity: 0.9;
-    transform: translate(-50%, 6px);
-  }
+.scroll-wheel {
+  position: absolute;
+  left: 50%;
+  top: 7px;
+  width: 2px;
+  height: 6px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: currentColor;
+  animation: scrollWheel 1.6s ease-in-out infinite;
 }
+.scroll-chevrons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: -2px;
+}
+.scroll-chevrons svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.3;
+  animation: scrollChevron 1.6s ease-in-out infinite;
+}
+.scroll-chevrons svg:nth-child(2) {
+  margin-top: -6px;
+  opacity: 0.15;
+  animation-delay: 0.15s;
+}
+@keyframes scrollWheel {
+  0% { opacity: 0.2; transform: translateY(0); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(10px); }
+}
+@keyframes scrollChevron {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50% { opacity: 0.9; transform: translateY(3px); }
+}
+/* 第二屏：岗位匹配 */
+.landing-match {
+  position: relative;
+  min-height: calc(100vh - 56px);
+  background: var(--color-page-bg);
+  /* 固定头部高 56px：滚动定位时给头部留出空间 */
+  scroll-margin-top: 56px;
+}
+.match-login {
+  min-height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 80px 24px;
+  text-align: center;
+}
+.match-login-eyebrow {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: var(--color-accent);
+}
+.match-login-title {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+.match-login-sub {
+  margin: 0 0 10px;
+  max-width: 520px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--color-text-2);
+}
+
 /* 标题逐行从遮罩里升起 */
 .hero-line {
   display: block;

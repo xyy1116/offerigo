@@ -2,7 +2,7 @@
   <header class="app-header" :class="{ 'is-overlay': overlay }">
     <div class="header-inner">
       <div class="header-left">
-        <button class="brand" @click="$router.push('/jobmatch')">
+        <button class="brand" @click="goHome">
           <span class="brand-mark" aria-hidden="true">
             <svg viewBox="0 0 32 32">
               <path
@@ -239,7 +239,20 @@ function isActive(path) {
 
 function go(path) {
   menuOpen.value = false
+  // 已经在单页落地页上时，"智能岗位匹配"直接滚到第二屏，而不是重新进入路由
+  if (path === '/jobmatch' && route.path === '/') {
+    document.querySelector('.landing-match')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    return
+  }
   router.push(path)
+}
+
+function goHome() {
+  if (route.path === '/') {
+    document.querySelector('.app-content')?.scrollTo({ top: 0, behavior: 'smooth' })
+    return
+  }
+  router.push('/')
 }
 
 async function handleCommand(command) {

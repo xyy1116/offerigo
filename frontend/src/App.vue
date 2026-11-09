@@ -80,7 +80,8 @@ body,
 }
 /* 切到首页时内容区跟着 hero 一起变暗，淡入过程中不会先闪一帧浅色底 */
 .app-content.is-home {
-  background: #04070d;
+  /* Hero 自带深色背景；下方岗位匹配需要恢复页面底色 */
+  background: transparent;
 }
 /* 让首页的 -56px 负 margin 留在 shell 内部，避免离场固定时子元素再跳 56px */
 .page-shell {

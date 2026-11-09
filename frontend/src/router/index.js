@@ -4,7 +4,7 @@ import { getToken } from '@/utils/token'
 const routes = [
   {
     path: '/',
-    name: 'Intro',
+    name: 'Landing',
     component: () => import('@/views/Home.vue'),
     meta: { title: 'OfferiGo 智能求职助手' }
   },
@@ -46,7 +46,7 @@ const routes = [
   },
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/jobmatch'
+    redirect: '/'
   }
 ]
 
@@ -55,18 +55,9 @@ const router = createRouter({
   routes
 })
 
-// 开场页每次页面加载只展示一次；结束后由开场页调用 markIntroDone
-let introDone = false
-export function markIntroDone() {
-  introDone = true
-}
-
-// 全局前置守卫：首次加载先走开场页；未登录访问受保护页时回开场页并打开登录弹窗
+// 全局前置守卫：未登录访问受保护页时回首页并打开登录弹窗
 router.beforeEach((to, from, next) => {
   document.title = to.meta.title ? `${to.meta.title} - OfferiGo` : 'OfferiGo 智能求职助手'
-  if (!introDone && to.path !== '/') {
-    return next({ path: '/', query: { redirect: to.fullPath } })
-  }
   if (to.meta.requiresAuth && !getToken()) {
     return next({ path: '/', query: { login: '1', redirect: to.fullPath } })
   }
