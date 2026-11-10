@@ -1,0 +1,64 @@
+# 本机专用编排：服务器 firewalld 会丢弃容器网桥的转发流量（容器访问不了外网），
+# 因此三个服务统一使用 host 网络，只占用 8080/8081/13306 三个本机端口。
+# 启动：docker compose --env-file .env -f deploy/docker-compose.hostnet.yml up -d --build
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-chuan}
+      TZ: Asia/Shanghai
+    # 宿主 3306 已被占用，这里换 13306 且只监听本机
+    command: --port=13306 --bind-address=127.0.0.1 --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-P", "13306", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/backend.Dockerfile
+      network: host
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:13306/${DB_NAME:-chuan}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
+      WEBSOCKET_ALLOWED_ORIGINS: ${WEBSOCKET_ALLOWED_ORIGINS}
+      APP_RESUME_DIR: /data/resumes
+      # 只监听本机，外部一律经 nginx 进入
+      SERVER_ADDRESS: 127.0.0.1
+      TZ: Asia/Shanghai
+    volumes:
+      - resume_data:/data/resumes
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/frontend.Dockerfile
+      network: host
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - backend
+    volumes:
+      # host 网络下不能按服务名访问后端，改用本机 nginx 配置
+      - ./nginx.host.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  mysql_data:
+  resume_data:
