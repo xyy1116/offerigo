@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getToken } from '@/utils/token'
+import { setLandingMode } from '@/utils/landingEntry'
 
 const routes = [
   {
@@ -10,9 +11,7 @@ const routes = [
   },
   {
     path: '/jobmatch',
-    name: 'JobMatch',
-    component: () => import('@/views/JobMatch.vue'),
-    meta: { title: '智能岗位匹配', requiresAuth: true }
+    redirect: '/'
   },
   {
     path: '/interview',
@@ -58,6 +57,12 @@ const router = createRouter({
 // 全局前置守卫：未登录访问受保护页时回首页并打开登录弹窗
 router.beforeEach((to, from, next) => {
   document.title = to.meta.title ? `${to.meta.title} - OfferiGo` : 'OfferiGo 智能求职助手'
+  const isInitial = !from.matched.length
+  if (!isInitial && from.path !== '/' && from.path !== '/jobmatch') {
+    const target = to.redirectedFrom?.path || to.path
+    if (target === '/jobmatch') setLandingMode('match')
+    else if (target === '/') setLandingMode('home')
+  }
   if (to.meta.requiresAuth && !getToken()) {
     return next({ path: '/', query: { login: '1', redirect: to.fullPath } })
   }

@@ -18,16 +18,16 @@
   --font-brand: 'Sora', 'Plus Jakarta Sans', 'Inter', sans-serif;
 
   /* 中性色阶（冷调蓝灰） */
-  --color-bg: #f4f7fa;
-  --color-page-bg: #f4f7fa;
+  --color-bg: #f3f7fa;
+  --color-page-bg: #f3f7fa;
   --color-surface: #ffffff;
-  --color-surface-muted: #eef3f6;
+  --color-surface-muted: #edf3f7;
   --color-nav: var(--color-surface);
   --color-table-header: #ffffff;
   --color-nav-active: var(--color-primary);
   --color-nav-glider: var(--color-accent-soft);
-  --color-hotmatch-border: var(--color-accent);
-  --color-hotmatch-tint: #e6f2f4;
+  --color-hotmatch-border: var(--color-lilac);
+  --color-hotmatch-tint: var(--color-lilac-bg);
   --color-text: #16202a;
   --color-text-2: #4d5a66;
   --color-text-3: #5f6c77;
@@ -36,13 +36,34 @@
   --color-border-hover: #9fb4c0;
 
   /* 主操作与强调：深青 */
-  --color-primary: #1f5f6b;
-  --color-primary-deep: #143f47;
-  --color-primary-mid: #1a5360;
-  --color-primary-light: #8fb3ba;
+  --color-primary: #17505c;
+  --color-primary-deep: #0f3b44;
+  --color-primary-mid: #134754;
+  --color-primary-light: #7fa5ac;
   --color-primary-bg: #e6eff1;
-  --color-accent: #1f5f6b;
+  --color-accent: #17505c;
   --color-accent-soft: #e6eff1;
+
+  /* 雾蓝强调：聚焦、下划线、普通数据 */
+  --color-mist: #6fa8c4;
+  --color-mist-deep: #4d819b;
+  --color-mist-mid: #94c2d8;
+  --color-mist-bg: #eaf4f9;
+  --color-mist-border: #cfe3ee;
+  --color-mist-text: #4d819b;
+  --color-focus: var(--color-mist-deep);
+
+  /* 雾紫只做高匹配/NEW/高分等亮点 */
+  --color-lilac: #9a8bbf;
+  --color-lilac-deep: #79699f;
+  --color-lilac-mid: #b8acd2;
+  --color-lilac-bg: #f2eff9;
+  --color-lilac-border: #ded7eb;
+  --color-lilac-text: #79699f;
+
+  /* 分区底色：只做主色同系的青/雾蓝 */
+  --color-section-teal: #eaf4f5;
+  --color-section-blue: #edf3fa;
 
   /* 语义色 */
   --color-danger: #b42318;
@@ -94,18 +115,26 @@
   --shadow-md: 0 6px 18px rgba(21, 36, 43, 0.08);
   --shadow-lg: 0 16px 40px rgba(21, 36, 43, 0.14);
   --shadow-hover: 0 10px 28px rgba(21, 36, 43, 0.1);
-  --shadow-teal: 0 6px 18px rgba(31, 95, 107, 0.18);
+  --shadow-teal: 0 6px 18px rgba(23, 80, 92, 0.18);
+  --shadow-mist: 0 8px 24px rgba(77, 129, 155, 0.16);
+  --shadow-lilac: 0 8px 24px rgba(121, 105, 159, 0.16);
 
   /* 渐变强调：主按钮 / 标题高光 / 分数高光 */
-  --gradient-action: linear-gradient(135deg, #143f47 0%, #1f5f6b 48%, #2c8f96 100%);
-  --gradient-title: linear-gradient(120deg, #16202a 0%, #1f5f6b 58%, #2c8f96 100%);
-  --gradient-soft: linear-gradient(135deg, #e6eff1 0%, #f4f7fa 100%);
+  --gradient-action: linear-gradient(135deg, #0f3b44 0%, #17505c 48%, #2c8f96 100%);
+  --gradient-title: linear-gradient(120deg, #16202a 0%, #17505c 58%, #2c8f96 100%);
+  --gradient-soft: linear-gradient(135deg, #e6eff1 0%, #f3f7fa 100%);
+  --gradient-score-high: linear-gradient(120deg, #17505c 0%, #6fa8c4 45%, #9a8bbf 100%);
+  --gradient-section: linear-gradient(120deg, var(--color-section-teal), var(--color-section-blue));
 
   /* 页面画布：基底 + 双柔光 + 极淡点阵 */
   --bg-canvas:
-    radial-gradient(1100px 560px at 8% -12%, rgba(44, 143, 150, 0.12), transparent 62%),
-    radial-gradient(900px 520px at 100% -6%, rgba(94, 200, 214, 0.10), transparent 58%),
-    radial-gradient(rgba(31, 95, 107, 0.045) 1px, transparent 1px) 0 0 / 24px 24px,
+    radial-gradient(1100px 560px at 8% -12%, rgba(23, 80, 92, 0.14), transparent 62%),
+    radial-gradient(900px 520px at 100% -6%, rgba(111, 168, 196, 0.12), transparent 58%),
+    radial-gradient(860px 460px at 94% 16%, rgba(91, 143, 168, 0.10), transparent 62%),
+    radial-gradient(760px 420px at 18% 4%, rgba(255, 255, 255, 0.72), transparent 62%),
+    radial-gradient(780px 440px at 78% 96%, rgba(154, 139, 191, 0.08), transparent 64%),
+    linear-gradient(rgba(23, 80, 92, 0.032) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, rgba(23, 80, 92, 0.032) 1px, transparent 1px) 0 0 / 32px 32px,
     var(--color-bg);
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -133,17 +162,35 @@
   --color-table-header: #171717;
   --color-nav-active: var(--color-text);
   --color-nav-glider: #262626;
-  --color-hotmatch-border: var(--color-primary-light);
-  --color-hotmatch-tint: #1a2a2b;
+  --color-hotmatch-border: var(--color-lilac);
+  --color-hotmatch-tint: var(--color-lilac-bg);
 
   /* 文字/链接用清爽青，实心按钮用更深的 action，保证白字对比度 */
-  --color-primary: #5ec8d6;
+  --color-primary: #67d6e2;
   --color-primary-deep: #2f7d76;
   --color-primary-mid: #3a8f87;
-  --color-primary-light: #8adbe5;
+  --color-primary-light: #9be3ec;
   --color-primary-bg: #262626;
-  --color-accent: #5ec8d6;
+  --color-accent: #67d6e2;
   --color-accent-soft: #262626;
+
+  --color-mist: #86b8cd;
+  --color-mist-deep: #6fa8c4;
+  --color-mist-mid: #a7cfdf;
+  --color-mist-bg: #15242c;
+  --color-mist-border: #2d4a58;
+  --color-mist-text: #a7cfdf;
+  --color-focus: var(--color-mist);
+
+  --color-lilac: #b3a5cf;
+  --color-lilac-deep: #9a8bbf;
+  --color-lilac-mid: #c9bede;
+  --color-lilac-bg: #201b2b;
+  --color-lilac-border: #3b334d;
+  --color-lilac-text: #c9bede;
+
+  --color-section-teal: #102023;
+  --color-section-blue: #131c26;
 
   --color-danger: #e06c62;
   --color-danger-bg: #2a1818;
@@ -163,19 +210,24 @@
   --color-action: #ededed;
   --color-action-hover: #ffffff;
   --color-action-active: #d6d6d6;
-  --color-action-light: #5ec8d6;
+  --color-action-light: #67d6e2;
   --color-action-text: #0d0d0d;
-  --color-link-hover: #8adbe5;
+  --color-link-hover: #9be3ec;
 
   /* 暗色下实心按钮保持浅色系，避免深色文字压在深青上看不清 */
   --gradient-action: linear-gradient(135deg, #ffffff 0%, #ededed 55%, #d6d6d6 100%);
-  --gradient-title: linear-gradient(120deg, #f2f2f2 0%, #8adbe5 58%, #5ec8d6 100%);
+  --gradient-title: linear-gradient(120deg, #f2f2f2 0%, #9be3ec 58%, #67d6e2 100%);
   --gradient-soft: linear-gradient(135deg, #202b2c 0%, #141414 100%);
+  --gradient-score-high: linear-gradient(120deg, #67d6e2 0%, #86b8cd 45%, #b3a5cf 100%);
+  --gradient-section: linear-gradient(120deg, var(--color-section-teal), var(--color-section-blue));
 
   --bg-canvas:
-    radial-gradient(1000px 520px at 8% -12%, rgba(94, 200, 214, 0.10), transparent 62%),
-    radial-gradient(860px 500px at 100% -6%, rgba(138, 219, 229, 0.06), transparent 58%),
-    radial-gradient(rgba(138, 219, 229, 0.05) 1px, transparent 1px) 0 0 / 24px 24px,
+    radial-gradient(1000px 520px at 8% -12%, rgba(103, 214, 226, 0.12), transparent 62%),
+    radial-gradient(860px 500px at 100% -6%, rgba(155, 227, 236, 0.08), transparent 58%),
+    radial-gradient(820px 420px at 94% 14%, rgba(111, 168, 196, 0.10), transparent 62%),
+    radial-gradient(760px 420px at 76% 94%, rgba(179, 165, 207, 0.09), transparent 64%),
+    linear-gradient(rgba(155, 227, 236, 0.04) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, rgba(155, 227, 236, 0.04) 1px, transparent 1px) 0 0 / 32px 32px,
     var(--color-bg);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -183,6 +235,8 @@
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
   --shadow-hover: 0 10px 28px rgba(0, 0, 0, 0.45);
   --shadow-teal: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --shadow-mist: 0 8px 24px rgba(134, 184, 205, 0.16);
+  --shadow-lilac: 0 8px 24px rgba(179, 165, 207, 0.16);
 
   /* Element Plus 变量覆盖 */
   --el-bg-color: var(--color-surface);
@@ -258,6 +312,17 @@
   justify-content: space-between;
   gap: var(--space-4);
   margin-bottom: var(--space-6);
+  padding: 16px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--gradient-section);
+}
+/* 使用 Tailwind 自定义页头的页面复用同一分区样式 */
+.page-header-band {
+  padding: 16px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--gradient-section);
 }
 .page-header .page-title {
   margin: 0;
@@ -266,14 +331,15 @@
   letter-spacing: -0.01em;
   color: var(--color-text);
 }
-.page-header .page-title::before {
+.page-header .page-title::before,
+.page-header-band .page-title::before {
   content: '';
   display: inline-block;
   width: 4px;
   height: 18px;
   margin-right: 10px;
   border-radius: 2px;
-  background: var(--gradient-action);
+  background: var(--color-mist);
   vertical-align: -2px;
 }
 .page-header .page-subtitle {
@@ -399,7 +465,9 @@ html {
 /* ---------- 路由切换 ---------- */
 /* 旧页在上层原地淡出，新页已经在下面就位：相当于交叉淡化，没有中间空帧 */
 .page-leave-active {
-  transition: opacity 0.26s ease;
+  /* 先压住旧页，等新页完成首轮渲染再淡出，避免把挂载卡顿露出来 */
+  transition: opacity 0.2s ease 0.18s;
+  will-change: opacity;
 }
 .page-leave-to {
   opacity: 0;

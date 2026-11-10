@@ -41,8 +41,8 @@ function render() {
               value: dims.map((d) => Number(d.score) || 0),
               name: '匹配度',
               areaStyle: { color: 'rgba(31,95,107,0.10)' },
-              lineStyle: { color: '#1f5f6b', width: 2 },
-              itemStyle: { color: '#1f5f6b' }
+              lineStyle: { color: '#17505c', width: 2 },
+              itemStyle: { color: '#17505c' }
             }
           ]
         }

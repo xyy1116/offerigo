@@ -53,6 +53,8 @@ public class JobRecommendService {
     private static final int MAX_BATCH = 100;
     /** 推荐页固定展示匹配度最高的 10 条。 */
     private static final int RECOMMEND_SIZE = 10;
+    /** 后端本次启动标识：重启后 NEW! 重新亮一次，方便演示。 */
+    private static final String RUN_VERSION = String.valueOf(System.currentTimeMillis());
 
     /** 从长技能描述里可单独命中的关键词，用于前端高亮与 matchSkillList。 */
     private static final List<String> MATCH_KEYWORDS = List.of(
@@ -233,6 +235,7 @@ public class JobRecommendService {
         vo.setDate(date.toString());
         vo.setCount(Math.min(RECOMMEND_SIZE, jobs.size()));
         vo.setVersion(jobs.isEmpty() ? 0L : date.toEpochDay());
+        vo.setRunVersion(RUN_VERSION);
         return vo;
     }
 

@@ -25,9 +25,14 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const visible = ref(false)
+
+// 首页据此暂停/恢复自动下滑计时
+watch(visible, (open) => {
+  window.dispatchEvent(new CustomEvent('guide-toggle', { detail: { open } }))
+})
 
 function open() {
   visible.value = true

@@ -1,5 +1,5 @@
 <template>
-  <div ref="homeRef" class="home-body">
+  <div ref="homeRef" class="home-body" :class="{ 'is-instant-entry': instantEntry }">
     <!-- ======================= 1. Hero ======================= -->
     <section class="hero" aria-label="OfferiGo 智能求职助手">
       <div ref="heroParallaxRef" class="hero-parallax" role="img"
@@ -8,6 +8,7 @@
           <div class="hero-shot">
             <img class="hero-bg" src="/stratum-vision-poster.jpg" alt="" fetchpriority="high" decoding="async" />
             <video
+              ref="heroVideoRef"
               class="hero-video"
               src="/stratum-vision.mp4"
               poster="/stratum-vision-poster.jpg"
@@ -22,10 +23,11 @@
         </div>
       </div>
       <div class="hero-scrim" aria-hidden="true"></div>
+      <div class="hero-veil" aria-hidden="true"></div>
       <div class="hero-copy">
         <h1 class="hero-title">
-          <span class="hero-line"><span class="hero-rise">让每一次投递，</span></span>
-          <span class="hero-line"><span class="hero-rise hero-title-accent">都更有把握。</span></span>
+          <span class="hero-line"><span class="hero-rise">每日智能搜，岗位精准投。</span></span>
+          <span class="hero-line"><span class="hero-rise">简历不怕乱，<span class="hero-title-accent">面试不怕难。</span></span></span>
         </h1>
         <p class="hero-sub">
           每日推荐岗位，AI 匹配评估、定制文书、模拟面试与笔试训练，一站式求职准备。
@@ -35,17 +37,15 @@
         </div>
       </div>
       <button type="button" class="hero-scroll" aria-label="下滑到智能岗位匹配" @click="scrollToMatch">
-        <span class="scroll-mouse" aria-hidden="true"><span class="scroll-wheel"></span></span>
-        <span class="scroll-chevrons" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7" /></svg>
-          <svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7" /></svg>
+        <span class="scroll-ring" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 6.5v10M7.8 12.3 12 16.5l4.2-4.2" /></svg>
         </span>
       </button>
     </section>
 
     <!-- 第二屏：智能岗位匹配 -->
     <section ref="matchSection" class="landing-match">
-      <JobMatch v-if="userStore.token" />
+      <JobMatch v-if="userStore.token" :fab-visible="matchReached" />
       <div v-else class="match-login">
         <p class="match-login-eyebrow">AI 智能岗位匹配</p>
         <h2 class="match-login-title">登录后开始你的岗位匹配</h2>
@@ -61,18 +61,30 @@ import { ref, onBeforeUnmount, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import JobMatch from '@/views/JobMatch.vue'
+import { consumeLandingMode } from '@/utils/landingEntry'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+// 首次打开保留 hero 入场和自动下滑；站内进入直接就位，不再自动播
+const entryMode = consumeLandingMode() || 'initial'
+const instantEntry = entryMode !== 'initial'
+const autoEnabled = entryMode === 'initial'
 
 const matchSection = ref(null)
 const homeRef = ref(null)
 const heroParallaxRef = ref(null)
+const heroVideoRef = ref(null)
+const matchReached = ref(false)
 
 let autoTimer = null
+let cinematicTimer = null
+let scrollAnimRaf = 0
 let interacted = false
 let scrolledToMatch = false
+let guideOpen = false
+let lastScrollTop = 0
+let videoPausedByScroll = false
 let scrollRaf = 0
 let scrollEl = null
 
@@ -86,38 +98,112 @@ function clearAutoTimer() {
   }
 }
 
+function scheduleAuto(delay = 2000) {
+  clearAutoTimer()
+  autoTimer = window.setTimeout(() => {
+    if (!interacted && !scrolledToMatch && !guideOpen) scrollToMatch()
+  }, delay)
+}
+
+function cancelScrollAnim() {
+  if (scrollAnimRaf) cancelAnimationFrame(scrollAnimRaf)
+  scrollAnimRaf = 0
+}
+
+// 1 秒长镜头：ease-out-cubic，前段推进、后段缓慢落定
+function animateScroll(container, target) {
+  cancelScrollAnim()
+  if (prefersReduced()) {
+    container.scrollTop = target
+    updateHeroProgress()
+    return
+  }
+  const start = container.scrollTop
+  const distance = target - start
+  if (Math.abs(distance) < 1) return
+  const duration = 1000
+  const t0 = performance.now()
+  const ease = (t) => 1 - Math.pow(1 - t, 3)
+  const step = (now) => {
+    const p = Math.min(1, (now - t0) / duration)
+    container.scrollTop = start + distance * ease(p)
+    updateHeroProgress()
+    scrollAnimRaf = p < 1 ? requestAnimationFrame(step) : 0
+  }
+  scrollAnimRaf = requestAnimationFrame(step)
+}
+
+function endCinematic() {
+  if (cinematicTimer) {
+    clearTimeout(cinematicTimer)
+    cinematicTimer = null
+  }
+  homeRef.value?.classList.remove('is-cinematic')
+}
+
+// 镜头推进：只加一个类，位移/缩放/淡出全部交给 GPU 合成
+function startCinematic() {
+  if (!homeRef.value || prefersReduced()) return
+  homeRef.value.classList.add('is-cinematic')
+  if (cinematicTimer) clearTimeout(cinematicTimer)
+  cinematicTimer = window.setTimeout(endCinematic, 1100)
+}
+
 function scrollToMatch() {
   scrolledToMatch = true
   clearAutoTimer()
   const section = matchSection.value
   const container = scrollEl || document.querySelector('.app-content')
   if (!section) return
-  const behavior = prefersReduced() ? 'auto' : 'smooth'
-  if (container) {
-    const top = section.getBoundingClientRect().top + container.scrollTop - 56
-    container.scrollTo({ top: Math.max(0, top), behavior })
-  } else {
-    section.scrollIntoView({ behavior, block: 'start' })
+  heroVideoRef.value?.pause()
+  videoPausedByScroll = true
+  // 先算目标：is-cinematic 会给岗位区加上入场位移
+  const target = container
+    ? Math.max(0, section.getBoundingClientRect().top + container.scrollTop - 56)
+    : null
+  if (!container) {
+    startCinematic()
+    section.scrollIntoView({ behavior: prefersReduced() ? 'auto' : 'smooth', block: 'start' })
+    return
   }
+  if (Math.abs(container.scrollTop - target) < 2) return
+  startCinematic()
+  animateScroll(container, target)
 }
 
-function onUserAction() {
+// 只有真正会改变滚动的操作才算用户接管，点按钮、打字不取消自动下滑
+const SCROLL_KEYS = ['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' ']
+function onUserAction(e) {
+  if (e.type === 'keydown' && !SCROLL_KEYS.includes(e.key)) return
+  cancelScrollAnim()
+  endCinematic()
   interacted = true
   clearAutoTimer()
+}
+
+function onGuideToggle(e) {
+  guideOpen = !!e.detail?.open
+  if (guideOpen) {
+    clearAutoTimer()
+  } else if (autoEnabled && !interacted && !scrolledToMatch) {
+    scheduleAuto()
+  }
 }
 
 function bindActions() {
   const opts = { passive: true }
   window.addEventListener('wheel', onUserAction, opts)
-  window.addEventListener('touchstart', onUserAction, opts)
-  window.addEventListener('pointerdown', onUserAction, opts)
+  window.addEventListener('touchmove', onUserAction, opts)
   window.addEventListener('keydown', onUserAction)
+  window.addEventListener('guide-toggle', onGuideToggle)
+  window.addEventListener('landing-scroll-match', scrollToMatch)
 }
 function unbindActions() {
   window.removeEventListener('wheel', onUserAction)
-  window.removeEventListener('touchstart', onUserAction)
-  window.removeEventListener('pointerdown', onUserAction)
+  window.removeEventListener('touchmove', onUserAction)
   window.removeEventListener('keydown', onUserAction)
+  window.removeEventListener('guide-toggle', onGuideToggle)
+  window.removeEventListener('landing-scroll-match', scrollToMatch)
 }
 
 function openLogin() {
@@ -132,6 +218,23 @@ function updateHeroProgress() {
   const h = window.innerHeight || 1
   const progress = Math.max(0, Math.min(1, top / h))
   homeRef.value.style.setProperty('--hp', progress.toFixed(3))
+  // 离开首屏就停掉视频解码，回到顶部再继续，避免过渡时和动画抢 GPU
+  const video = heroVideoRef.value
+  const goingUp = top < lastScrollTop
+  lastScrollTop = top
+  // 岗位区上边缘越过导航下方才显示悬浮球；hero 一露头就隐藏，避免压在 hero 上
+  if (!matchReached.value || goingUp) {
+    matchReached.value = !!matchSection.value && matchSection.value.getBoundingClientRect().top <= 72
+  }
+  if (video) {
+    if (progress > 0.45 && !video.paused) {
+      video.pause()
+      videoPausedByScroll = true
+    } else if (progress < 0.3 && goingUp && video.paused && videoPausedByScroll) {
+      video.play().catch(() => {})
+      videoPausedByScroll = false
+    }
+  }
 }
 function onScroll() {
   if (!scrollRaf) scrollRaf = requestAnimationFrame(updateHeroProgress)
@@ -190,12 +293,21 @@ onMounted(() => {
   initHeroParallax()
   scrollEl = document.querySelector('.app-content')
   scrollEl?.addEventListener('scroll', onScroll, { passive: true })
-  updateHeroProgress()
   bindActions()
-  // 进入页面 2 秒内没有任何操作时，自动下滑到岗位匹配
-  autoTimer = window.setTimeout(() => {
-    if (!interacted && !scrolledToMatch) scrollToMatch()
-  }, 2000)
+
+  // 从其他页面进入岗位匹配：旧页淡出期间直接落位，用户看不到滚动过程
+  if (entryMode === 'match' && scrollEl && matchSection.value) {
+    const target = Math.max(0, matchSection.value.getBoundingClientRect().top + scrollEl.scrollTop - 56)
+    scrollEl.scrollTop = target
+    scrolledToMatch = true
+    updateHeroProgress()
+    return
+  }
+
+  if (scrollEl) scrollEl.scrollTop = 0
+  updateHeroProgress()
+  // 只有首次打开/刷新才自动下滑；站内回首页只展示 hero
+  if (autoEnabled) scheduleAuto(2000)
 })
 
 onBeforeUnmount(() => {
@@ -203,6 +315,8 @@ onBeforeUnmount(() => {
   unbindActions()
   scrollEl?.removeEventListener('scroll', onScroll)
   if (scrollRaf) cancelAnimationFrame(scrollRaf)
+  cancelScrollAnim()
+  endCinematic()
   if (cleanupParallax) cleanupParallax()
 })
 </script>
@@ -212,6 +326,7 @@ onBeforeUnmount(() => {
   --ink: var(--color-text);
   --body-c: var(--color-text-2);
   --muted: var(--color-text-3);
+  --ease-cinematic: cubic-bezier(0.33, 1, 0.68, 1);
   min-height: 100vh;
   background: var(--color-page-bg);
   color: var(--body-c);
@@ -223,7 +338,9 @@ onBeforeUnmount(() => {
 
 /* ===== Hero ===== */
 .hero {
-  position: relative;
+  position: sticky;
+  top: -56px;
+  z-index: 0;
   height: 100vh;
   overflow: hidden;
   background: #04070d;
@@ -247,11 +364,11 @@ onBeforeUnmount(() => {
   top: 50%;
   width: max(100vw, 177.78vh);
   height: max(100vh, 56.25vw);
-  transform: translate(-45.5%, -50%) scale(calc(1.1 + var(--hp, 0) * 0.06));
-  filter: blur(calc(var(--hp, 0) * 2px));
-  transition: filter 0.2s linear;
+  /* 只缩放/移动，不做实时滤镜：滚动和过渡都交给合成层 */
+  transform: translate(-45.5%, -50%) scale(calc(1.1 + var(--hp, 0) * 0.18));
+  opacity: calc(1 - var(--hp, 0) * 0.65);
+  backface-visibility: hidden;
 }
-/* 呼吸感：极慢的推拉，避免一张死图 */
 .hero-bg,
 .hero-video {
   position: absolute;
@@ -261,7 +378,6 @@ onBeforeUnmount(() => {
   height: 100%;
   object-fit: cover;
   object-position: 50% 50%;
-  animation: heroBreathe 26s ease-in-out infinite alternate;
 }
 @keyframes heroMediaIn {
   from {
@@ -273,43 +389,64 @@ onBeforeUnmount(() => {
     transform: none;
   }
 }
-@keyframes heroBreathe {
-  from {
-    transform: scale(1.01) translate3d(0, 0, 0);
-  }
-  to {
-    transform: scale(1.045) translate3d(-0.6%, -0.6%, 0);
-  }
-}
 /* 左侧压暗，保证白字落在山体与水面而不是亮部石面上 */
 .hero-scrim {
   position: absolute;
   inset: 0;
-  opacity: calc(1 - var(--hp, 0) * 0.35);
+  opacity: calc(1 - var(--hp, 0) * 0.25);
   background:
     linear-gradient(90deg, rgba(4, 7, 13, 0.9) 0%, rgba(4, 7, 13, 0.66) 30%,
       rgba(4, 7, 13, 0.18) 56%, rgba(4, 7, 13, 0) 76%),
     linear-gradient(0deg, rgba(4, 7, 13, 0.66) 0%, rgba(4, 7, 13, 0) 34%);
 }
+/* 下滑时页面底色自下而上揭开 hero，上滑时再退回去 */
+.hero-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--color-page-bg);
+  -webkit-mask-image: linear-gradient(0deg, #000 0%, transparent 72%);
+  mask-image: linear-gradient(0deg, #000 0%, transparent 72%);
+  opacity: calc(var(--hp, 0) * 0.5);
+}
 .hero-copy {
   position: absolute;
   left: 0;
   top: 50%;
+  z-index: 2;
   width: min(720px, 46vw);
   padding-left: clamp(24px, 8.2vw, 118px);
-  transform: translateY(calc(-50% + var(--hp, 0) * -36px));
-  opacity: calc(1 - var(--hp, 0) * 1.15);
+  transform: translateY(calc(-50% - var(--hp, 0) * 38px));
   color: #fff;
 }
+/* 自动下滑：镜头推近、内容分层让位；幕布由岗位区整块盖上 */
+.is-cinematic .hero-shot {
+  transform: translate(-45.5%, -51%) scale(1.36);
+  transition: transform 1s var(--ease-cinematic);
+  will-change: transform;
+}
+.is-cinematic .hero-copy {
+  transform: translateY(calc(-50% - 52px)) scale(1.02);
+  transition: transform 1s var(--ease-cinematic);
+}
+.is-cinematic .hero-veil {
+  opacity: 0.6;
+  transition: opacity 0.9s ease 0.05s;
+}
+.is-cinematic .hero-scrim {
+  opacity: 0.7;
+  transition: opacity 0.8s ease;
+}
 .hero-title {
-  font-size: clamp(2rem, 3vw, 3.2rem);
+  font-size: clamp(1.9rem, 2.8vw, 3.1rem);
   font-weight: 600;
-  line-height: 1.16;
+  line-height: 1.14;
   letter-spacing: -0.02em;
   text-wrap: balance;
 }
 .hero-title-accent {
-  background: linear-gradient(120deg, #ffffff 0%, #b8ecf2 52%, #6fd3df 100%);
+  background: linear-gradient(120deg, #ffffff 0%, #d7e8f1 42%, #6fa8c4 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -320,12 +457,31 @@ onBeforeUnmount(() => {
   font-size: clamp(0.95rem, 1.05vw, 1.15rem);
   line-height: 1.75;
   color: rgba(224, 232, 245, 0.76);
+  transform: translateY(calc(var(--hp, 0) * -14px));
 }
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   margin-top: clamp(22px, 3.4vh, 36px);
+  transform: translateY(calc(var(--hp, 0) * -8px));
+}
+.is-cinematic .hero-sub {
+  animation: none;
+  transform: translateY(-18px);
+  transition: transform 0.65s var(--ease-cinematic) 0.08s;
+}
+.is-cinematic .hero-actions {
+  animation: none;
+  transform: translateY(-10px);
+  transition: transform 0.6s var(--ease-cinematic);
+}
+/* 从其他页面进入：hero 直接就位，只保留 1.2s 停留后下滑 */
+.home-body.is-instant-entry .hero-media,
+.home-body.is-instant-entry .hero-rise,
+.home-body.is-instant-entry .hero-sub,
+.home-body.is-instant-entry .hero-actions {
+  animation: none !important;
 }
 .hero-btn {
   display: inline-flex;
@@ -376,88 +532,93 @@ onBeforeUnmount(() => {
   border-color: rgba(255, 255, 255, 0.5);
   color: #ffffff;
 }
-/* 底部下滑提示：玻璃质感鼠标 + 双层箭头，随滚动淡出下沉 */
+/* 底部下滑提示：30px 细环 + 小箭头，克制、随滚动淡出 */
 .hero-scroll {
   position: absolute;
-  bottom: clamp(16px, 2.8vh, 30px);
+  bottom: clamp(18px, 3vh, 34px);
   left: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   background: transparent;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.78);
   cursor: pointer;
-  transform: translate(-50%, calc(var(--hp, 0) * 18px));
-  opacity: calc(1 - var(--hp, 0) * 2);
-  transition: color 0.2s ease;
+  transform: translate(-50%, calc(var(--hp, 0) * 14px));
+  opacity: calc(1 - var(--hp, 0) * 2.4);
+  transition: color 0.2s ease, opacity 0.2s linear;
 }
-.hero-scroll:hover {
-  color: #ffffff;
+.scroll-ring {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.46);
+  border-radius: 50%;
+  background: rgba(4, 7, 13, 0.24);
+  transition: border-color 0.22s ease, background-color 0.22s ease,
+    transform 0.28s var(--ease-out-expo);
 }
-.scroll-mouse {
-  position: relative;
-  display: block;
-  width: 24px;
-  height: 36px;
-  border: 1.5px solid currentColor;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.05), 0 8px 24px rgba(0, 0, 0, 0.25);
-}
-.scroll-wheel {
-  position: absolute;
-  left: 50%;
-  top: 7px;
-  width: 2px;
-  height: 6px;
-  margin-left: -1px;
-  border-radius: 2px;
-  background: currentColor;
-  animation: scrollWheel 1.6s ease-in-out infinite;
-}
-.scroll-chevrons {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: -2px;
-}
-.scroll-chevrons svg {
+.scroll-ring svg {
   width: 14px;
   height: 14px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.6;
+  stroke-width: 1.3;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.3;
-  animation: scrollChevron 1.6s ease-in-out infinite;
+  animation: scrollCue 2.4s ease-in-out infinite;
 }
-.scroll-chevrons svg:nth-child(2) {
-  margin-top: -6px;
-  opacity: 0.15;
-  animation-delay: 0.15s;
+.hero-scroll:hover {
+  color: #ffffff;
 }
-@keyframes scrollWheel {
-  0% { opacity: 0.2; transform: translateY(0); }
-  30% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(10px); }
+.hero-scroll:hover .scroll-ring {
+  border-color: rgba(255, 255, 255, 0.64);
+  background: rgba(4, 7, 13, 0.3);
+  transform: scale(1.08);
 }
-@keyframes scrollChevron {
-  0%, 100% { opacity: 0.25; transform: translateY(0); }
-  50% { opacity: 0.9; transform: translateY(3px); }
+.hero-scroll:focus-visible {
+  outline: none;
+}
+.hero-scroll:focus-visible .scroll-ring {
+  outline: 2px solid rgba(255, 255, 255, 0.75);
+  outline-offset: 3px;
+}
+.is-cinematic .hero-scroll {
+  opacity: 0;
+}
+@keyframes scrollCue {
+  0%, 100% { transform: translateY(-1px); opacity: 0.55; }
+  50% { transform: translateY(2px); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scroll-ring svg { animation: none; }
 }
 /* 第二屏：岗位匹配 */
 .landing-match {
   position: relative;
+  z-index: 1;
   min-height: calc(100vh - 56px);
-  background: var(--color-page-bg);
+  background: var(--bg-canvas);
+  background-attachment: fixed;
+  box-shadow: 0 -20px 52px rgba(3, 7, 13, 0.16);
   /* 固定头部高 56px：滚动定位时给头部留出空间 */
   scroll-margin-top: 56px;
+}
+/* 自动下滑时整块从下方翻上来；手动上滑不受影响 */
+.is-cinematic .landing-match {
+  animation: matchRise 1s var(--ease-cinematic) 0.05s both;
+}
+@keyframes matchRise {
+  from {
+    transform: translateY(72px) scale(0.985);
+  }
+  to {
+    transform: none;
+  }
 }
 .match-login {
   min-height: calc(100vh - 56px);
@@ -493,15 +654,30 @@ onBeforeUnmount(() => {
 .hero-line {
   display: block;
   overflow: hidden;
+  transform: translateY(calc(var(--hp, 0) * -28px));
+}
+.hero-line:nth-child(2) {
+  transform: translateY(calc(var(--hp, 0) * -14px));
+}
+.is-cinematic .hero-line {
+  transition: transform 0.6s var(--ease-cinematic);
+}
+.is-cinematic .hero-line:nth-child(1) {
+  transform: translateY(-28px);
+  transition-delay: 0.03s;
+}
+.is-cinematic .hero-line:nth-child(2) {
+  transform: translateY(-14px);
+  transition-delay: 0.08s;
 }
 .hero-rise {
   display: block;
 }
-.hero-line:first-child .hero-rise {
-  animation: heroMaskUp 0.95s cubic-bezier(0.16, 1, 0.3, 1) 0.22s both;
+.hero-line:nth-child(1) .hero-rise {
+  animation: heroMaskUp 0.95s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
 }
-.hero-line:last-child .hero-rise {
-  animation: heroMaskUp 0.95s cubic-bezier(0.16, 1, 0.3, 1) 0.34s both;
+.hero-line:nth-child(2) .hero-rise {
+  animation: heroMaskUp 0.95s cubic-bezier(0.16, 1, 0.3, 1) 0.32s both;
 }
 @keyframes heroMaskUp {
   from {
@@ -523,7 +699,7 @@ onBeforeUnmount(() => {
 }
 .hero-sub,
 .hero-actions {
-  animation: heroUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: heroUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 .hero-sub {
   animation-delay: 0.5s;
@@ -940,7 +1116,7 @@ onBeforeUnmount(() => {
     top: 52%;
   }
   .hero-title {
-    font-size: clamp(1.9rem, 8vw, 2.6rem);
+    font-size: clamp(1.5rem, 7vw, 2.3rem);
   }
   .workflow,
   .tech {
@@ -1004,6 +1180,26 @@ onBeforeUnmount(() => {
   }
   .hero-video {
     display: none;
+  }
+  .hero-shot {
+    transform: translate(-45.5%, -50%) scale(1.1);
+    opacity: 1;
+  }
+  .hero-copy {
+    transform: translateY(-50%);
+    opacity: 1;
+  }
+  .hero-line,
+  .hero-sub,
+  .hero-actions {
+    transform: none;
+    opacity: 1;
+  }
+  .hero-veil {
+    opacity: 0;
+  }
+  .is-cinematic .landing-match {
+    animation: none;
   }
 }
 </style>

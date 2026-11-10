@@ -1,76 +1,64 @@
 <template>
-  <div class="jobmatch-page">
-    <div class="page-header" v-reveal>
-      <div class="page-header-left">
-        <h1 class="page-title">智能岗位匹配</h1>
-        <p class="page-sub">我的收藏与我的简历素材一站式联动，AI 动态综合打分与排名</p>
+  <div class="jobmatch-page" @click="notifyRecommendSeen">
+    <div class="job-view-bar" v-reveal>
+      <div class="job-view-heading">
+        <h1 class="job-view-title">{{ viewTitle }}</h1>
+        <span class="job-view-count">{{ initialLoading ? '加载中…' : `${displayedJobs.length} 个岗位` }}</span>
+        <span v-if="jobActiveCat === 'recommend'" class="job-view-update">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="8" />
+            <path d="M12 7.5V12l3 2" />
+          </svg>
+          每日 08:00 自动更新
+        </span>
+      </div>
+      <div class="page-header-tools job-view-tools">
+        <el-input v-model="jobFilterKeyword" clearable placeholder="搜索岗位名称" class="toolbar-search" />
+        <el-select v-model="jobSortKey" class="toolbar-sort">
+          <el-option v-for="opt in SORT_OPTIONS" :key="opt.value" :label="opt.label" :value="opt.value" />
+        </el-select>
+        <button v-if="jobActiveCat === 'all'" class="button button--small" @click="importChoiceVisible = true">导入岗位</button>
+        <el-tooltip content="调整技能、经历、学历、契合度在总分中的权重" placement="top">
+          <button class="button button--plain button--small" @click="weightConfigVisible = true">匹配权重</button>
+        </el-tooltip>
+        <template v-if="jobActiveCat === 'all' && selectedCount">
+          <label class="select-all-toggle" title="全选当前列表">
+            <input type="checkbox" :checked="allSelected" @change="toggleSelectAll" />
+            <span>{{ allSelected ? '取消全选' : '全选' }}</span>
+          </label>
+          <span class="selected-count">已选 {{ selectedCount }}</span>
+          <button
+            class="batch-action batch-action--danger"
+            :disabled="batchDeleting"
+            @click="batchDeleteCurrent"
+          >批量删除</button>
+        </template>
+        <button v-if="jobActiveCat === 'all' && !initialLoading && !jobList.length" class="button button--plain button--small" @click="jobPasteBox && focusJobPaste()">粘贴导入</button>
       </div>
     </div>
 
     <!-- 我的简历素材：右上角固定悬浮入口（挂到 body，避免路由切换的 transform 把 fixed 变成相对页面） -->
     <Teleport to="body">
-      <el-tooltip :content="sidebarOpen ? '收起我的简历素材' : '展开我的简历素材'" placement="left">
-        <button
-          type="button"
-          class="material-fab"
-          :aria-label="sidebarOpen ? '收起我的简历素材' : '展开我的简历素材'"
-          @click="toggleSidebar"
-        >
-          <el-icon :size="18"><Files /></el-icon>
-        </button>
-      </el-tooltip>
+      <Transition name="fab">
+        <div v-if="fabVisible" class="material-fab-slot">
+          <el-tooltip :content="sidebarOpen ? '收起我的简历素材' : '展开我的简历素材'" placement="left">
+            <button
+              type="button"
+              class="material-fab"
+              :aria-label="sidebarOpen ? '收起我的简历素材' : '展开我的简历素材'"
+              @click="toggleSidebar"
+            >
+              <el-icon :size="18"><Files /></el-icon>
+            </button>
+          </el-tooltip>
+        </div>
+      </Transition>
     </Teleport>
 
     <!-- 工作台：主体岗位库（70%）+ 右侧简历素材侧边栏（30%） -->
     <div class="workspace" :class="{ 'is-open': sidebarOpen }">
       <!-- 主体：我的目标岗位 -->
       <main class="main-stage">
-        <div class="stage-head" v-reveal="30">
-          <h2 class="stage-title">{{ stageTitle }}</h2>
-          <span class="stage-count">{{ initialLoading ? '加载中…' : `${displayedJobs.length} 个岗位` }}</span>
-        </div>
-        <!-- 顶部工具栏（整合原岗位管理全部功能） -->
-        <div class="toolbar" v-reveal="60">
-          <div class="cat-tabs">
-            <button class="cat-tab" :class="{ 'is-active': jobActiveCat === 'recommend' }" @click="switchCat('recommend')">最新推荐</button>
-            <button class="cat-tab" :class="{ 'is-active': jobActiveCat === 'all' }" @click="switchCat('all')">我的收藏</button>
-            <button class="cat-tab" :class="{ 'is-active': jobActiveCat === 'combined' }" @click="switchCat('combined')">查看所有</button>
-            <span v-if="catFilterOptions.length" class="cat-divider" aria-hidden="true"></span>
-            <button
-              v-for="t in catFilterOptions"
-              :key="t"
-              class="cat-tab cat-tab--sub"
-              :class="{ 'is-active': jobTypeFilters.includes(t) }"
-              @click="toggleCatFilter(t)"
-            >{{ t }}</button>
-          </div>
-          <div class="toolbar-left">
-            <el-input v-model="jobFilterKeyword" clearable placeholder="搜索岗位名称与要求" class="toolbar-search" />
-            <el-select v-model="jobSortKey" class="toolbar-sort">
-              <el-option v-for="opt in SORT_OPTIONS" :key="opt.value" :label="opt.label" :value="opt.value" />
-            </el-select>
-          </div>
-          <div class="toolbar-right">
-            <button class="button button--small" @click="importChoiceVisible = true">导入岗位</button>
-            <div v-if="jobActiveCat === 'all'" class="batch-actions">
-              <label class="select-all-toggle" title="全选当前列表">
-                <input type="checkbox" :checked="allSelected" @change="toggleSelectAll" />
-                <span>全选</span>
-              </label>
-              <span v-if="selectedCount" class="selected-count">已选 {{ selectedCount }}</span>
-              <button
-                class="batch-action batch-action--danger"
-                :disabled="batchDeleting || !selectedCount"
-                @click="batchDeleteCurrent"
-              >批量删除</button>
-            </div>
-            <el-tooltip content="调整技能、经历、学历、契合度在总分中的权重" placement="top">
-              <button class="button button--plain button--small" @click="weightConfigVisible = true">匹配权重</button>
-            </el-tooltip>
-            <button v-if="!initialLoading && !jobList.length" class="button button--plain button--small" @click="jobPasteBox && focusJobPaste()">粘贴导入</button>
-          </div>
-        </div>
-
         <!-- 粘贴导入（默认收起，点击工具栏「粘贴导入」展开）-->
         <div v-if="jobPasteExpanded" class="feed-box">
           <div class="add-section-title">粘贴导入</div>
@@ -128,9 +116,11 @@
                 <span class="start-guide-num">2</span>
                 <div class="start-guide-body">
                   <b>导入或收藏岗位</b>
-                  <span>从「最新推荐」加入我的收藏，或直接导入岗位</span>
+                  <span v-if="jobActiveCat === 'all'">直接导入岗位，或从「最新推荐」加入我的收藏</span>
+                  <span v-else>切换到「我的收藏」后可导入岗位</span>
                 </div>
-                <button class="button button--small" @click="importChoiceVisible = true">导入岗位</button>
+                <button v-if="jobActiveCat === 'all'" class="button button--small" @click="importChoiceVisible = true">导入岗位</button>
+                <button v-else class="button button--small" @click="switchCat('all')">去我的收藏导入</button>
               </li>
               <li>
                 <span class="start-guide-num">3</span>
@@ -158,7 +148,9 @@
           <div
             v-for="(job, jobIndex) in displayedJobs"
             :key="job.id"
+            v-reveal="Math.min(jobIndex, 8) * 24"
             class="job-card"
+            :data-job-id="job.id"
             :class="{
               'is-open': expandedJobs[job.id],
               'is-flash': jobFlashIds.has(job.id),
@@ -174,7 +166,12 @@
                 <label v-if="jobActiveCat === 'all'" class="job-select" title="勾选" @click.stop>
                   <input type="checkbox" :checked="isJobSelected(job)" @change="toggleJobSelect(job)" />
                 </label>
-                <span class="job-name" title="查看岗位详情" @click.stop="openJobDetail(job)">{{ job.jobName }}</span>
+                <span class="job-name" title="查看岗位详情" @click.stop="openJobDetail(job)">
+                  <template v-for="(segment, index) in jobNameSegments(job.jobName)" :key="index">
+                    <mark v-if="segment.hit" class="job-name-hit">{{ segment.text }}</mark>
+                    <template v-else>{{ segment.text }}</template>
+                  </template>
+                </span>
                 <span v-if="job.isRecommendation" class="job-rec-tag">今日推荐</span>
                 <span class="job-company">{{ job.companyName || '未填公司' }}</span>
                 <span v-if="job.sourcePlatform" class="job-source-tag" title="岗位来源">{{ job.sourcePlatform }}</span>
@@ -199,7 +196,7 @@
                   v-if="!job.isRecommendation"
                   type="button"
                   class="apply-elf"
-                  :class="{ 'is-popping': elfPopId === job.id }"
+                  :class="{ 'is-popping': elfPopId === job.id, 'is-intro': elfIntro }"
                   aria-label="打开求职小精灵"
                   @click.stop="openAssistantFromElf(job)"
                 >
@@ -238,11 +235,12 @@
               <div class="job-card-actions">
                 <template v-if="job.isRecommendation">
                   <button
-                    class="button button--small"
-                    :class="{ 'is-loading': addingRecommendId === job.recommendId }"
-                    :disabled="addingRecommendId === job.recommendId"
+                    class="button button--small recommend-add-btn"
+                    :class="{ 'is-loading': addingRecommendId === job.recommendId, 'is-collected': job.isInTarget }"
+                    :disabled="job.isInTarget || addingRecommendId === job.recommendId"
+                    :title="job.isInTarget ? '该岗位已在「我的收藏」中' : ''"
                     @click.stop="addRecommendationToTarget(job)"
-                  >{{ addingRecommendId === job.recommendId ? '加入中…' : '加入我的收藏' }}</button>
+                  >{{ job.isInTarget ? '已加入我的收藏' : addingRecommendId === job.recommendId ? '加入中…' : '加入我的收藏' }}</button>
                   <button class="button button--plain button--small" @click.stop="openExternalLink(job.jobLink)">查看原岗位</button>
                 </template>
                 <template v-else>
@@ -1166,9 +1164,9 @@ import GenerationProgress from '@/components/GenerationProgress.vue'
 import { fetchResumeTemplates, readCachedResumeTemplates } from '@/utils/resumeTemplates'
 import { recordGenerationDuration } from '@/utils/generationTiming'
 import { cropAndCompressPhoto } from '@/utils/photo'
-
 import { useLinkageStore } from '@/stores/linkage'
 import { usePositiveMomentStore } from '@/stores/positiveMoment'
+import { useJobViewStore } from '@/stores/jobView'
 import {
   listKnowledge, deleteKnowledge, splitKnowledge, importResume, batchSaveKnowledge, saveBasicInfo, updateKnowledge,
   addKnowledgeItem, generateMaterial,
@@ -1177,11 +1175,20 @@ import {
 import { getGenerationProgress } from '@/api/application'
 import { getRecommendVersion } from '@/api/jobRecommend'
 
+const props = defineProps({
+  fabVisible: { type: Boolean, default: true }
+})
+
 const router = useRouter()
 const linkage = useLinkageStore()
 const positiveMoment = usePositiveMomentStore()
+const jobViewStore = useJobViewStore()
 
 const MATERIAL_TYPES = ['基础信息', '教育经历', '项目经历', '实习经历', '技能证书', '荣誉奖项', '其他']
+
+// 进入岗位匹配时，所有小精灵短暂亮出名称，之后仍可 hover 查看
+const elfIntro = ref(false)
+let elfIntroTimer = null
 
 const knowledgeList = ref([])
 // 素材版本：内容变化后让求职助手的评估/定制简历/求职信缓存失效
@@ -1328,8 +1335,8 @@ const jobPreviewSaving = ref(false)
 const pendingJob = ref(null)
 
 const jobFilterKeyword = ref('')
-const jobActiveCat = ref('recommend') // 'recommend' 最新推荐 | 'all' 我的收藏 | 'combined' 查看所有
-const jobTypeFilters = ref([])
+const jobActiveCat = computed(() => jobViewStore.view)
+const jobTypeFilters = computed(() => jobViewStore.currentFilters)
 // 首次数据回来前不渲染空态，避免切页瞬间闪一下「0 个岗位 / 暂无素材」
 const initialLoading = ref(true)
 const recommendJobs = ref([])
@@ -1338,16 +1345,17 @@ const addingRecommendId = ref(null)
 let recommendFailures = 0
 let recommendRetryAt = 0
 
-// 主标签切换：清空分类筛选；综合榜和推荐榜统一按匹配度排，名次才有含义
+// 主标签切换：综合榜和推荐榜统一按匹配度排，名次才有含义
 function switchCat(cat) {
-  jobActiveCat.value = cat
-  jobTypeFilters.value = []
+  jobViewStore.setView(cat)
   if (cat === 'combined' || cat === 'recommend') jobSortKey.value = 'score'
 }
-function toggleCatFilter(t) {
-  jobTypeFilters.value = jobTypeFilters.value.includes(t)
-    ? jobTypeFilters.value.filter((x) => x !== t)
-    : [...jobTypeFilters.value, t]
+
+// 在最新推荐里点任意内容，视为已看当天推荐
+function notifyRecommendSeen() {
+  if (jobViewStore.view === 'recommend') {
+    window.dispatchEvent(new CustomEvent('recommend-seen'))
+  }
 }
 const jobFlashIds = ref(new Set())
 const batchDeleting = ref(false)
@@ -1385,25 +1393,12 @@ function focusJobPaste() {
 const SORT_OPTIONS = [
   { label: '匹配度从高到低', value: 'score' },
   { label: '添加时间降序', value: 'createTime' },
-  { label: '薪资从高到低', value: 'salaryDesc' },
-  { label: '薪资从低到高', value: 'salaryAsc' },
+  { label: '岗位名称（按拼音）', value: 'jobName' },
 ]
 const jobSortKey = ref('score')
 
-// 薪资字符串 → 排序用纯数值（解析区间取中位数，万/千单位归一化）；「面议」等无法解析的返回 null
-function salarySortValue(s) {
-  if (s == null) return null
-  const str = String(s).toLowerCase()
-  const nums = (str.match(/\d+(?:\.\d+)?/g) || []).map(Number).filter((n) => Number.isFinite(n))
-  if (!nums.length) return null
-  const sorted = [...nums].sort((x, y) => x - y)
-  const mid = sorted.length % 2 === 1
-    ? sorted[(sorted.length - 1) / 2]
-    : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
-  if (str.includes('万')) return mid * 10000
-  if (str.includes('k')) return mid * 1000
-  return mid
-}
+// 岗位名称排序：中文按拼音，空名称沉底
+const jobNameCollator = new Intl.Collator('zh-CN', { sensitivity: 'base', numeric: true })
 
 // 匹配度排序基准：仅「有实际匹配分（>0）」参与排序，0 分/无匹配数据返回 null（统一沉底）
 function matchSortValue(job) {
@@ -1546,15 +1541,24 @@ const baseJobsOfCat = computed(() => {
   return mergedJobs.value
 })
 
-// 当前标签下实际存在的岗位类型（数据驱动，不做固定列表）
-const catFilterOptions = computed(() => {
+// 三个视图各自的类型选项：导航 hover 面板直接读取
+function jobTypeOptions(list) {
   const set = new Set()
-  for (const j of baseJobsOfCat.value) {
-    const t = (j.jobType || '').trim()
-    if (t && t !== '其他') set.add(t)
+  for (const job of list || []) {
+    const type = (job.jobType || '').trim()
+    if (type && type !== '其他') set.add(type)
   }
   return Array.from(set)
-})
+}
+const filterOptionsByView = computed(() => ({
+  recommend: jobTypeOptions(recommendJobEntries.value),
+  all: jobTypeOptions(mergedJobs.value),
+  combined: jobTypeOptions(combinedJobs.value)
+}))
+watch([filterOptionsByView, initialLoading], ([options, loading]) => {
+  jobViewStore.setOptions(options)
+  if (!loading) jobViewStore.pruneTypes(options)
+}, { immediate: true, deep: true })
 
 // 展示列表：分类多选（取并集）/搜索筛选 + 排序
 const displayedJobs = computed(() => {
@@ -1564,9 +1568,7 @@ const displayedJobs = computed(() => {
     list = list.filter((j) => jobTypeFilters.value.includes((j.jobType || '').trim()))
   }
   if (kw) {
-    list = list.filter((j) =>
-      (j.jobName || '').toLowerCase().includes(kw) || (j.jobRequirement || '').toLowerCase().includes(kw)
-    )
+    list = list.filter((j) => (j.jobName || '').toLowerCase().includes(kw))
   }
   const sorted = [...list]
   const key = jobSortKey.value
@@ -1575,16 +1577,15 @@ const displayedJobs = computed(() => {
   if (key === 'createTime') {
     // 添加时间降序：最新添加靠前
     sorted.sort(timeIdDesc)
-  } else if (key === 'salaryDesc' || key === 'salaryAsc') {
-    // 薪资排序：按薪资中位数（面议/无法解析沉底），同值按添加时间降序
+  } else if (key === 'jobName') {
+    // 岗位名称按拼音排序，同名与空名称兜底用添加时间
     sorted.sort((a, b) => {
-      const va = salarySortValue(a.salary)
-      const vb = salarySortValue(b.salary)
-      if (va == null && vb == null) return timeIdDesc(a, b)
-      if (va == null) return 1
-      if (vb == null) return -1
-      const diff = key === 'salaryDesc' ? vb - va : va - vb
-      return diff || timeIdDesc(a, b)
+      const na = (a.jobName || '').trim()
+      const nb = (b.jobName || '').trim()
+      if (!na && !nb) return timeIdDesc(a, b)
+      if (!na) return 1
+      if (!nb) return -1
+      return jobNameCollator.compare(na, nb) || timeIdDesc(a, b)
     })
   } else {
     // 匹配度从高到低：综合匹配总分严格降序，0 分/无匹配沉底，同分按添加时间降序
@@ -1600,13 +1601,37 @@ const displayedJobs = computed(() => {
   return sorted
 })
 
+// 搜索只匹配岗位名称；命中的关键词在名称里高亮
+function jobNameSegments(name) {
+  const keyword = jobFilterKeyword.value.trim()
+  return highlightSegments(name, keyword ? [keyword] : [])
+}
+
+// 当前列表里真正带小精灵的岗位数：切到“我的收藏/查看所有”后也能触发名称提示
+const elfJobCount = computed(() => displayedJobs.value.filter((job) => !job.isRecommendation).length)
+watch([() => props.fabVisible, elfJobCount], ([visible, count]) => {
+  if (elfIntroTimer) {
+    clearTimeout(elfIntroTimer)
+    elfIntroTimer = null
+  }
+  if (!visible || !count) {
+    elfIntro.value = false
+    return
+  }
+  elfIntro.value = true
+  elfIntroTimer = window.setTimeout(() => {
+    elfIntro.value = false
+    elfIntroTimer = null
+  }, 1600)
+}, { immediate: true })
+
 // 名次只在「匹配度排序」下展示，避免与当前展示顺序矛盾
 const showRanking = computed(() =>
   (jobActiveCat.value === 'combined' || jobActiveCat.value === 'recommend') && jobSortKey.value === 'score'
 )
 
-// 标题随主标签切换
-const stageTitle = computed(() => {
+// 顶部工具条的视图名
+const viewTitle = computed(() => {
   if (jobActiveCat.value === 'recommend') return '最新推荐'
   if (jobActiveCat.value === 'combined') return '查看所有'
   return '我的收藏'
@@ -2517,12 +2542,6 @@ async function batchDeleteCurrent() {
   }
 }
 
-// 当前标签下某类型被删空后，自动移除该筛选，避免停留在空结果
-watch(catFilterOptions, (options) => {
-  const pruned = jobTypeFilters.value.filter((t) => options.includes(t))
-  if (pruned.length !== jobTypeFilters.value.length) jobTypeFilters.value = pruned
-})
-
 const analyzing = ref(false)
 const dataDirty = ref(false)
 const analyzeProgress = ref(null)   // { total, done, jobIds, startedAt }
@@ -2722,6 +2741,8 @@ onUnmounted(() => {
   window.removeEventListener('focus', loadRecommendVersion)
   clearInterval(recommendVersionTimer)
   recommendVersionTimer = null
+  if (elfIntroTimer) clearTimeout(elfIntroTimer)
+  elfIntroTimer = null
   stopAnalyzeClock()
   clearInterval(analyzePollTimer)
   stopResumeStagePoll()
@@ -3212,7 +3233,20 @@ async function confirmJobPreview() {
       jobType: j.jobType || '',
       jobLink: j.jobLink || ''
     })
-    if (res.data) jobList.value.unshift(res.data)
+    if (res.data) {
+      const created = res.data
+      jobViewStore.setView('all')
+      jobViewStore.clearTypes('all')
+      jobFilterKeyword.value = ''
+      jobSortKey.value = 'createTime'
+      jobList.value.unshift(created)
+      flashJob(created.id)
+      nextTick(() => {
+        const card = document.querySelector(`.job-card[data-job-id="${created.id}"]`)
+        const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        card?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' })
+      })
+    }
     jobPreviewVisible.value = false
     pendingJob.value = null
     jobPasteContent.value = ''
@@ -3432,7 +3466,7 @@ const paperStyle = computed(() => {
   const t = activeTemplate.value
   if (!t) return {}
   return {
-    '--resume-accent': t.primary || '#1f5f6b',
+    '--resume-accent': t.primary || '#17505c',
     '--resume-secondary': t.secondary || '#d3e5df',
     '--resume-bg': t.background || '#ffffff',
     '--resume-text': t.text || '#141414',
@@ -3954,11 +3988,13 @@ async function exportResumeWord() {
 }
 
 /* 右上角固定悬浮入口：仅图标，hover 显示文字提示 */
-.material-fab {
+.material-fab-slot {
   position: fixed;
   top: 72px;
   right: 24px;
   z-index: 900;
+}
+.material-fab {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3990,10 +4026,24 @@ async function exportResumeWord() {
   outline: 2px solid var(--color-primary);
   outline-offset: 3px;
 }
+.fab-enter-active,
+.fab-leave-active {
+  transition: opacity 0.22s ease, transform 0.28s var(--ease-out-expo);
+}
+.fab-enter-from,
+.fab-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.92);
+}
+.fab-leave-active {
+  pointer-events: none;
+}
 @media (max-width: 720px) {
-  .material-fab {
+  .material-fab-slot {
     top: 68px;
     right: 16px;
+  }
+  .material-fab {
     width: 40px;
     height: 40px;
   }
@@ -4155,6 +4205,12 @@ async function exportResumeWord() {
 .job-name:hover {
   text-decoration: underline;
   color: var(--color-accent);
+}
+.job-name-hit {
+  background: var(--color-warning-bg);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
 }
 .job-select {
   display: inline-flex;
@@ -6579,11 +6635,68 @@ async function exportResumeWord() {
 }
 
 /* ================= 工作台一体化布局（岗位库主体 + 简历素材侧边栏） ================= */
+.job-view-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 0 2px 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+.job-view-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.job-view-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+.job-view-count {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+.job-view-update {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-3);
+}
+.job-view-update svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: var(--color-mist);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.job-view-tools {
+  flex: 1;
+  justify-content: flex-end;
+}
+.job-view-tools .toolbar-search {
+  width: 200px;
+}
+.job-view-tools .toolbar-sort {
+  width: 160px;
+}
 .jobmatch-page .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--gradient-section);
 }
 .page-header-left {
   min-width: 0;
@@ -6600,6 +6713,16 @@ async function exportResumeWord() {
   font-weight: 600;
   color: var(--color-text);
 }
+.stage-title::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--color-mist);
+  vertical-align: 2px;
+}
 .stage-count {
   font-size: 12px;
   color: var(--color-text-3);
@@ -6609,6 +6732,20 @@ async function exportResumeWord() {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.page-header-tools {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.page-header-tools .toolbar-search {
+  width: 200px;
+}
+.page-header-tools .toolbar-sort {
+  width: 160px;
 }
 .workspace {
   display: flex;
@@ -6937,12 +7074,16 @@ async function exportResumeWord() {
   border-color: var(--color-border-hover);
   box-shadow: var(--shadow-hover);
 }
+.job-card.is-hotmatch:hover {
+  border-color: var(--color-lilac);
+  box-shadow: var(--shadow-lilac);
+}
 .job-card.is-score-changed {
   animation: score-flash 2.2s ease;
 }
 @keyframes score-flash {
   0%, 100% { background: var(--color-surface); }
-  20%, 60% { background: var(--color-accent-soft); }
+  20%, 60% { background: var(--color-lilac-bg); }
 }
 .job-card-main {
   cursor: pointer;
@@ -6995,7 +7136,7 @@ async function exportResumeWord() {
   background: var(--color-accent);
   font-variant-numeric: tabular-nums;
 }
-.job-score.score-high { background: var(--color-accent); }
+.job-score.score-high { background: var(--color-lilac-deep); }
 .job-score.score-mid { background: var(--color-text-3); }
 .job-score.score-low { background: var(--color-border-strong); }
 .dim-bars--inline {
@@ -7028,7 +7169,7 @@ async function exportResumeWord() {
   background: var(--color-accent);
   transition: width 0.4s var(--ease-out-expo, cubic-bezier(0.22, 0.61, 0.36, 1));
 }
-.dim-bar-fill.is-high { background: var(--color-accent); }
+.dim-bar-fill.is-high { background: var(--color-mist); }
 .dim-bar-fill.is-mid { background: #9fb4c0; }
 .dim-bar-fill.is-low { background: var(--color-border-strong); }
 .dim-bar-val {
@@ -7059,6 +7200,16 @@ async function exportResumeWord() {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+.recommend-add-btn {
+  min-width: 106px;
+}
+.recommend-add-btn.is-collected:disabled {
+  opacity: 1;
+  background: var(--color-surface-muted);
+  border-color: var(--color-border);
+  color: var(--color-text-3);
+  cursor: not-allowed;
 }
 .job-edit-link,
 .job-del-link {
@@ -7189,10 +7340,11 @@ async function exportResumeWord() {
   pointer-events: none;
   opacity: 0;
   transform: translate(-4px, -50%);
-  transition: opacity 0.18s ease, transform 0.18s ease, color 0.18s ease;
+  transition: opacity 0.28s ease, transform 0.32s var(--ease-out-expo), color 0.28s ease;
 }
 .apply-elf:hover .elf-label,
-.apply-elf:focus-visible .elf-label {
+.apply-elf:focus-visible .elf-label,
+.apply-elf.is-intro .elf-label {
   opacity: 1;
   transform: translate(0, -50%);
   color: var(--color-primary);
@@ -7274,7 +7426,7 @@ async function exportResumeWord() {
 }
 /* 高匹配分数用渐变高光，强化第一眼的识别度 */
 .job-score-big.score-high .score-num-text {
-  background: var(--gradient-title);
+  background: var(--gradient-score-high);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -7295,12 +7447,10 @@ async function exportResumeWord() {
   .job-score-big.is-score-pulse .score-num-text {
     background-image: linear-gradient(
       90deg,
-      #1f5f6b 0%,
-      #2f9e9a 22%,
-      #3b82f6 45%,
-      #6aa84f 65%,
-      #d99a2b 85%,
-      #1f5f6b 100%
+      #17505c 0%,
+      #6fa8c4 35%,
+      #9a8bbf 65%,
+      #17505c 100%
     );
     background-size: 300% 100%;
     -webkit-background-clip: text;
@@ -7377,9 +7527,9 @@ async function exportResumeWord() {
   align-items: center;
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--color-accent-soft);
-  border: 1px solid var(--color-border);
-  color: var(--color-accent);
+  background: var(--color-lilac-bg);
+  border: 1px solid var(--color-lilac-border);
+  color: var(--color-lilac-text);
   font-size: 11px;
   font-weight: 600;
   animation: scorePopIn 0.45s ease-out;

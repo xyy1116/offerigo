@@ -4,13 +4,13 @@
    ============================================================ */
 
 :root {
-  --el-color-primary: #1f5f6b;
-  --el-color-primary-dark-2: #143f47;
-  --el-color-primary-light-3: #628f97;
-  --el-color-primary-light-5: #8fafb5;
-  --el-color-primary-light-7: #bccfd3;
-  --el-color-primary-light-8: #d2e0e3;
-  --el-color-primary-light-9: #e9f0f2;
+  --el-color-primary: var(--color-primary);
+  --el-color-primary-dark-2: var(--color-primary-deep);
+  --el-color-primary-light-3: #527b87;
+  --el-color-primary-light-5: #89a6ae;
+  --el-color-primary-light-7: #bccfd4;
+  --el-color-primary-light-8: #d3e0e4;
+  --el-color-primary-light-9: #eaf0f2;
   --el-color-danger: #b42318;
   --el-color-error: #b42318;
   --el-color-error-light-9: #fdf0ef;
@@ -49,7 +49,7 @@
   --el-input-placeholder-color: #5f6c77;
   --el-input-border-color: #c9d6df;
   --el-input-hover-border-color: var(--color-border-hover);
-  --el-input-focus-border-color: #1f5f6b;
+  --el-input-focus-border-color: var(--color-focus);
 
   --el-table-header-bg-color: var(--color-table-header);
   --el-table-header-text-color: var(--color-text-3);

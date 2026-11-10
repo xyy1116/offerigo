@@ -338,7 +338,7 @@ function renderChart() {
   const lastIndex = values.reduce((acc, v, i) => (v !== null ? i : acc), -1)
 
   const dark = resolvedTheme.value === 'dark'
-  const lineColor = cssVar('--color-primary', '#1f5f6b')
+  const lineColor = cssVar('--color-primary', '#17505c')
   const surface = cssVar('--color-surface', '#ffffff')
   const border = cssVar('--color-border', '#dfe7ec')
   const borderStrong = cssVar('--color-border-strong', '#c9d6df')

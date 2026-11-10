@@ -9,7 +9,7 @@
   --el-input-bg-color: var(--color-surface);
   --el-input-border-color: var(--color-border-strong);
   --el-input-hover-border-color: var(--color-border-hover);
-  --el-input-focus-border-color: var(--color-primary);
+  --el-input-focus-border-color: var(--color-focus);
   --el-input-border-radius: var(--radius-sm);
   --el-input-clear-hover-color: var(--color-danger);
 }

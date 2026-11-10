@@ -189,7 +189,7 @@ function typeLabel(t) {
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: var(--color-accent);
+  color: var(--color-lilac-deep);
   font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
 }

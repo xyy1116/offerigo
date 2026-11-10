@@ -23,38 +23,110 @@
 
       <nav class="nav" :class="{ open: menuOpen }">
         <span class="nav-glider" :style="gliderStyle" aria-hidden="true"></span>
-        <el-tooltip
-          v-for="item in navs"
-          :key="item.path"
-          :content="!userStore.token && item.path !== '/' ? '登录后使用' : ''"
-          :disabled="!!userStore.token || item.path === '/'"
-          placement="bottom"
-        >
-          <span
+        <template v-for="item in navs" :key="item.view || item.path">
+          <div
+            v-if="item.view"
             ref="navItems"
-            class="nav-item"
-            :class="{ active: isActive(item.path) }"
-            tabindex="0"
-            @click="go(item.path)"
-            @keydown.enter="go(item.path)"
-            @keydown.space.prevent="go(item.path)"
+            class="nav-view"
+            @mouseenter="hoveredView = item.view"
+            @mouseleave="hoveredView = null"
           >
-            {{ item.name }}
             <span
-              v-if="item.path === '/exam' && bankUnseen"
-              class="nav-hot"
-              role="status"
-              aria-label="题库已更新"
-              title="题库已更新"
+              class="nav-item"
+              :class="{ active: isNavActive(item) }"
+              tabindex="0"
+              @click="selectView(item.view)"
+              @keydown.enter="selectView(item.view)"
+              @keydown.space.prevent="selectView(item.view)"
             >
-              <svg class="nav-hot-flame" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12.4 2.2c.5 3-1.3 4.5-2.7 6.1-1.5 1.7-2.8 3.4-2.8 5.8a5.4 5.4 0 0 0 10.8 0c0-2.1-1-3.7-2-5-.9-1.1-1.9-2.2-2.3-3.9-.6 1.4-1.5 2.4-2.3 3.2.7-2.1.6-4.2 1.3-6.2Z" />
-                <path class="core" d="M12.1 11.4c.9 1.1 1.9 2 1.9 3.4a1.9 1.9 0 0 1-3.8 0c0-1.2.9-2.1 1.9-3.4Z" />
-              </svg>
-              <span class="nav-hot-text">HOT!</span>
+              {{ item.name }}
+              <span
+                v-if="item.view === 'recommend' && recommendUnseen"
+                class="nav-new"
+                role="status"
+                aria-label="最新推荐已更新"
+              >
+                <svg class="nav-new-spark" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 2.4 14.2 8.2 20 10.4 14.2 12.6 12 18.4 9.8 12.6 4 10.4 9.8 8.2Z" />
+                </svg>
+                <span class="nav-new-text">NEW!</span>
+              </span>
+              <span v-if="isNavActive(item) && filterCount(item.view)" class="nav-filter-count">{{ filterCount(item.view) }}</span>
             </span>
-          </span>
-        </el-tooltip>
+            <button
+              type="button"
+              class="nav-mobile-caret"
+              :class="{ open: mobileView === item.view }"
+              :aria-label="`展开${item.name}的岗位类型`"
+              :aria-expanded="mobileView === item.view"
+              @click.stop="toggleMobileView(item.view)"
+            >
+              <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" /></svg>
+            </button>
+            <div
+              v-show="hoveredView === item.view || mobileView === item.view"
+              class="nav-submenu"
+              @mouseenter="hoveredView = item.view"
+            >
+              <p class="nav-submenu-title">
+                <span>岗位类型 <span class="nav-submenu-hint">可多选</span></span>
+                <span v-if="isNavActive(item) && filterCount(item.view)" class="nav-submenu-count">{{ filterCount(item.view) }} 已选</span>
+              </p>
+              <div v-if="jobViewStore.optionsFor(item.view).length" class="nav-submenu-grid">
+                <button
+                  v-for="type in jobViewStore.optionsFor(item.view)"
+                  :key="type"
+                  type="button"
+                  class="nav-submenu-item"
+                  :class="{ selected: jobViewStore.filtersFor(item.view).includes(type) }"
+                  @click="pickType(item.view, type)"
+                >
+                  <span class="nav-submenu-check" aria-hidden="true">✓</span>
+                  <span>{{ type }}</span>
+                </button>
+              </div>
+              <p v-else class="nav-submenu-empty">暂无岗位类型</p>
+              <button
+                v-if="jobViewStore.filtersFor(item.view).length"
+                type="button"
+                class="nav-submenu-clear"
+                @click="clearTypes(item.view)"
+              >清除筛选</button>
+            </div>
+          </div>
+
+          <el-tooltip
+            v-else
+            :content="!userStore.token ? '登录后使用' : ''"
+            :disabled="!!userStore.token"
+            placement="bottom"
+          >
+            <span
+              ref="navItems"
+              class="nav-item"
+              :class="{ active: isNavActive(item) }"
+              tabindex="0"
+              @click="goPath(item.path)"
+              @keydown.enter="goPath(item.path)"
+              @keydown.space.prevent="goPath(item.path)"
+            >
+              {{ item.name }}
+              <span
+                v-if="item.path === '/exam' && bankUnseen"
+                class="nav-hot"
+                role="status"
+                aria-label="题库已更新"
+                title="题库已更新"
+              >
+                <svg class="nav-hot-flame" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12.4 2.2c.5 3-1.3 4.5-2.7 6.1-1.5 1.7-2.8 3.4-2.8 5.8a5.4 5.4 0 0 0 10.8 0c0-2.1-1-3.7-2-5-.9-1.1-1.9-2.2-2.3-3.9-.6 1.4-1.5 2.4-2.3 3.2.7-2.1.6-4.2 1.3-6.2Z" />
+                  <path class="core" d="M12.1 11.4c.9 1.1 1.9 2 1.9 3.4a1.9 1.9 0 0 1-3.8 0c0-1.2.9-2.1 1.9-3.4Z" />
+                </svg>
+                <span class="nav-hot-text">HOT!</span>
+              </span>
+            </span>
+          </el-tooltip>
+        </template>
       </nav>
 
       <div class="right">
@@ -92,7 +164,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { Close, Menu } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
+import { useJobViewStore } from '@/stores/jobView'
 import { getBankVersion } from '@/api/exam'
+import { getRecommendVersion } from '@/api/jobRecommend'
 import LoginDialog from '@/views/Login.vue'
 import GuideDialog from '@/components/GuideDialog.vue'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
@@ -100,10 +174,13 @@ import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const jobViewStore = useJobViewStore()
 
 const menuOpen = ref(false)
 const loginVisible = ref(false)
 const guideRef = ref(null)
+const hoveredView = ref(null)
+const mobileView = ref(null)
 
 // 首页：头部叠在 hero 上透明显示；滚过 hero 后切回实心，避免浅色内容上白字看不清
 const isHome = ref(route.path === '/')
@@ -165,7 +242,7 @@ async function checkBankUpdate() {
       seen = ''
     }
     bankUnseen.value = version !== seen
-    if (isActive('/exam')) markBankSeen(version)
+    if (isRouteActive('/exam')) markBankSeen(version)
     // 旧版本可能把"已看过"存在 anon 键下：读到后顺手迁移到用户键
     if (seen === version) markBankSeen(version)
   } catch (e) {
@@ -173,16 +250,73 @@ async function checkBankUpdate() {
   }
 }
 
+// —— 最新推荐 NEW!：按日期+版本记住已看 ——
+const recommendUnseen = ref(false)
+const recommendSeenVersion = ref('')
+let recommendTimer = null
+const recommendIdentity = () => userStore.userInfo?.id || userStore.userInfo?.username || ''
+const recommendSeenKey = () => 'recommend_seen_' + recommendIdentity()
+
+function markRecommendSeen() {
+  const wasUnseen = recommendUnseen.value
+  recommendUnseen.value = false
+  if (!wasUnseen) return
+  const version = recommendSeenVersion.value
+  if (!version || !recommendIdentity()) return
+  try {
+    localStorage.setItem(recommendSeenKey(), version)
+  } catch (e) {
+    // 隐私模式下忽略
+  }
+}
+
+async function checkRecommendUpdate() {
+  if (!userStore.token || !recommendIdentity()) {
+    recommendUnseen.value = false
+    return
+  }
+  try {
+    const res = await getRecommendVersion()
+    const data = res.data?.data || {}
+    const count = Number(data.count) || 0
+    const version = String(data.version || '')
+    const boot = String(data.runVersion || '')
+    const key = version && count ? `${data.date || ''}:${version}:${count}:${boot}` : ''
+    recommendSeenVersion.value = key
+    if (!key) {
+      recommendUnseen.value = false
+      return
+    }
+    let seen = ''
+    try {
+      seen = localStorage.getItem(recommendSeenKey()) || ''
+    } catch (e) {
+      seen = ''
+    }
+    recommendUnseen.value = key !== seen
+  } catch (e) {
+    // 版本检查失败不打扰用户
+  }
+}
+
+function onRecommendSeen() {
+  markRecommendSeen()
+}
+
 // 登录成功后关闭弹窗，并同步拉取头像
 watch(() => userStore.token, (token) => {
   if (!token) {
     bankUnseen.value = false
+    recommendUnseen.value = false
     return
   }
   loginVisible.value = false
   userStore.fetchProfile()
     .catch(() => {})
-    .finally(checkBankUpdate)
+    .finally(() => {
+      checkBankUpdate()
+      checkRecommendUpdate()
+    })
 })
 
 // 未登录访问受保护页 / 登录过期时，路由带 login=1 回首页并自动打开弹窗
@@ -201,7 +335,7 @@ const navItems = ref([])
 const gliderStyle = ref({ left: '0px', width: '0px', opacity: 0 })
 
 function updateGlider() {
-  const idx = navs.findIndex((item) => isActive(item.path))
+  const idx = navs.findIndex((item) => isNavActive(item))
   const el = navItems.value[idx]
   if (!el) {
     gliderStyle.value = { left: '0px', width: '0px', opacity: 0 }
@@ -217,6 +351,7 @@ function updateGlider() {
 watch(() => route.path, (path) => {
   // 立即切换状态，颜色由 CSS 渐变完成，不再等旧页面淡出后硬切
   isHome.value = path === '/'
+  hoveredView.value = null
   if (path.startsWith('/exam')) checkBankUpdate()
   nextTick(() => {
     updateGlider()
@@ -224,26 +359,67 @@ watch(() => route.path, (path) => {
   })
 })
 
+watch(menuOpen, (open) => {
+  if (!open) mobileView.value = null
+})
+watch(() => jobViewStore.view, () => nextTick(updateGlider))
+watch(() => jobViewStore.filtersByView, () => nextTick(updateGlider), { deep: true })
+
 const navs = [
-  { name: '智能岗位匹配', path: '/jobmatch' },
+  { name: '最新推荐', view: 'recommend' },
+  { name: '我的收藏', view: 'all' },
+  { name: '查看所有', view: 'combined' },
   { name: 'AI 面试官', path: '/interview' },
   { name: 'AI 笔试助手', path: '/exam' }
 ]
 
 const displayName = computed(() => userStore.userInfo?.username || '用户')
 
-function isActive(path) {
-  if (path === '/') return route.path === '/'
+function isRouteActive(path) {
   return route.path === path || route.path.startsWith(path + '/')
 }
 
-function go(path) {
+function isNavActive(item) {
+  if (item.view) return route.path === '/' && jobViewStore.view === item.view
+  return isRouteActive(item.path)
+}
+
+function filterCount(view) {
+  return jobViewStore.filtersFor(view).length
+}
+
+function selectView(view) {
   menuOpen.value = false
-  // 已经在单页落地页上时，"智能岗位匹配"直接滚到第二屏，而不是重新进入路由
-  if (path === '/jobmatch' && route.path === '/') {
-    document.querySelector('.landing-match')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    return
+  if (view === 'recommend') markRecommendSeen()
+  jobViewStore.setView(view)
+  if (route.path === '/') {
+    window.dispatchEvent(new CustomEvent('landing-scroll-match'))
+  } else {
+    router.push('/jobmatch')
   }
+}
+
+function pickType(view, type) {
+  if (view === 'recommend') markRecommendSeen()
+  jobViewStore.toggleType(view, type)
+  jobViewStore.setView(view)
+  if (route.path === '/') {
+    window.dispatchEvent(new CustomEvent('landing-scroll-match'))
+  } else {
+    router.push('/jobmatch')
+  }
+}
+
+function clearTypes(view) {
+  jobViewStore.clearTypes(view)
+}
+
+function toggleMobileView(view) {
+  mobileView.value = mobileView.value === view ? null : view
+}
+
+function goPath(path) {
+  menuOpen.value = false
   router.push(path)
 }
 
@@ -271,11 +447,16 @@ onMounted(async () => {
     await userStore.fetchProfile().catch(() => {})
   }
   checkBankUpdate()
+  checkRecommendUpdate()
   // 启动补跑可能在页面加载后才完成，稍后再确认几次
   setTimeout(checkBankUpdate, 30000)
   setTimeout(checkBankUpdate, 120000)
+  setTimeout(checkRecommendUpdate, 30000)
   window.addEventListener('focus', checkBankUpdate)
+  window.addEventListener('focus', checkRecommendUpdate)
+  window.addEventListener('recommend-seen', onRecommendSeen)
   bankTimer = setInterval(checkBankUpdate, 5 * 60 * 1000)
+  recommendTimer = setInterval(checkRecommendUpdate, 5 * 60 * 1000)
   await nextTick()
   updateGlider()
   contentEl = document.querySelector('.app-content')
@@ -292,7 +473,10 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateGlider)
   window.removeEventListener('resize', syncOverHero)
   window.removeEventListener('focus', checkBankUpdate)
+  window.removeEventListener('focus', checkRecommendUpdate)
+  window.removeEventListener('recommend-seen', onRecommendSeen)
   clearInterval(bankTimer)
+  clearInterval(recommendTimer)
   contentEl?.removeEventListener('scroll', syncOverHero)
 })
 </script>
@@ -306,15 +490,10 @@ onUnmounted(() => {
   right: 0;
   height: 56px;
   background: var(--color-nav);
-  background: color-mix(in srgb, var(--color-nav) 84%, transparent);
-  -webkit-backdrop-filter: blur(14px) saturate(1.08);
-  backdrop-filter: blur(14px) saturate(1.08);
   border-bottom: 1px solid var(--color-border);
   z-index: 1000;
-  /* 首页切换：底色、分割线一起渐变，不再等旧页淡出后硬切 */
-  transition:
-    background-color 0.24s ease,
-    border-color 0.24s ease;
+  /* 首页切换：分割线渐变；底色直接切换，避免落点停留在过渡灰色 */
+  transition: border-color 0.24s ease;
 }
 /* 首页 hero 上方：透明叠加，不占文档流 */
 .app-header.is-overlay {
@@ -461,7 +640,7 @@ onUnmounted(() => {
   height: 28px;
   border-radius: 9px;
   color: #ffffff;
-  background: linear-gradient(135deg, #143f47 0%, #1f5f6b 45%, #2f9e9a 100%);
+  background: linear-gradient(135deg, #0f3b44 0%, #17505c 45%, #2f9e9a 100%);
   box-shadow: 0 2px 8px rgba(31, 95, 107, 0.24);
 }
 .brand-mark svg {
@@ -478,7 +657,7 @@ onUnmounted(() => {
   transition: color 0.24s ease;
 }
 .brand-go {
-  background-image: linear-gradient(100deg, #1f5f6b 10%, #2f8f8a 90%);
+  background-image: linear-gradient(100deg, #17505c 10%, #2f8f8a 90%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -532,6 +711,233 @@ onUnmounted(() => {
   white-space: nowrap;
   transition: color 0.24s ease, background-color 0.18s ease;
 }
+.nav-view {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+}
+.nav-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 15px;
+  height: 15px;
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: 1px;
+}
+.nav-mobile-caret {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-3);
+  cursor: pointer;
+}
+.nav-mobile-caret svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s ease;
+}
+.nav-mobile-caret.open svg {
+  transform: rotate(180deg);
+}
+.nav-submenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 30;
+  width: 220px;
+  padding: 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(-50%);
+  animation: navSubmenuIn 0.18s var(--ease-out-expo);
+}
+/* 补上主项和面板之间的 hover 桥，移入面板时不会闪断 */
+.nav-submenu::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -10px;
+  height: 10px;
+}
+/* 指向主项的小箭头 */
+.nav-submenu::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-left: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transform: translateX(-50%) rotate(45deg);
+}
+@keyframes navSubmenuIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+.nav-submenu-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0 2px 8px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--color-text-3);
+}
+.nav-submenu-hint {
+  margin-left: 4px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  opacity: 0.8;
+}
+.nav-submenu-count {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-accent-soft);
+  color: var(--color-primary);
+  font-size: 10px;
+  letter-spacing: 0;
+}
+.nav-submenu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+.nav-submenu-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text-2);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+.nav-submenu-item:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+.nav-submenu-item.selected {
+  background: var(--color-accent-soft);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+.nav-submenu-check {
+  flex: none;
+  width: 12px;
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0;
+}
+.nav-submenu-item.selected .nav-submenu-check {
+  opacity: 1;
+}
+.nav-submenu-item > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-submenu-empty {
+  margin: 2px 0 4px;
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+.nav-submenu-clear {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 2px 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-primary);
+  font-family: inherit;
+  font-size: 11px;
+  text-align: right;
+  cursor: pointer;
+}
+.nav-submenu-clear:hover {
+  color: var(--color-primary-mid);
+}
+.app-header.is-overlay .nav-submenu {
+  background: rgba(9, 12, 18, 0.96);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+.app-header.is-overlay .nav-submenu::after {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(9, 12, 18, 0.96);
+}
+.app-header.is-overlay .nav-submenu-title {
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+.app-header.is-overlay .nav-submenu-count {
+  background: rgba(47, 158, 138, 0.28);
+  color: #ffffff;
+}
+.app-header.is-overlay .nav-submenu-clear {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+.app-header.is-overlay .nav-submenu-title,
+.app-header.is-overlay .nav-submenu-empty {
+  color: rgba(255, 255, 255, 0.5);
+}
+.app-header.is-overlay .nav-submenu-item {
+  color: rgba(255, 255, 255, 0.78);
+}
+.app-header.is-overlay .nav-submenu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+.app-header.is-overlay .nav-submenu-item.selected {
+  background: rgba(47, 158, 138, 0.28);
+  color: #ffffff;
+}
+.app-header.is-overlay .nav-submenu-clear {
+  color: #9fe3d8;
+}
 /* 题库有未看过的更新：AI 笔试助手右上角 火苗 + HOT! */
 .nav-hot {
   position: absolute;
@@ -571,6 +977,46 @@ onUnmounted(() => {
 .app-header.is-overlay .nav-hot-text {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
+/* 最新推荐的每日 NEW!：和 HOT 同一套小标样式，只换颜色 */
+.nav-new {
+  position: absolute;
+  top: -9px;
+  right: -13px;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1px;
+  color: var(--color-lilac-deep);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  filter: drop-shadow(0 1px 3px rgba(107, 95, 140, 0.22));
+  animation: nav-hot-bob 2.4s ease-in-out infinite;
+}
+.nav-new-spark {
+  width: 11px;
+  height: 13px;
+  fill: currentColor;
+  transform-origin: 50% 50%;
+  animation: nav-new-twinkle 1.8s ease-in-out infinite;
+}
+.nav-new-text {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  transform: translateY(-1px) skewX(-6deg);
+}
+.app-header.is-overlay .nav-new {
+  color: var(--color-lilac-mid);
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.3));
+}
+.app-header.is-overlay .nav-new-text {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+@keyframes nav-new-twinkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  50% { transform: scale(0.82) rotate(18deg); opacity: 0.7; }
+}
 @keyframes nav-hot-bob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-2px); }
@@ -583,7 +1029,9 @@ onUnmounted(() => {
 }
 @media (prefers-reduced-motion: reduce) {
   .nav-hot,
-  .nav-hot-flame { animation: none; }
+  .nav-new,
+  .nav-hot-flame,
+  .nav-new-spark { animation: none; }
 }
 .nav-item:hover {
   color: var(--color-nav-active);
@@ -593,6 +1041,17 @@ onUnmounted(() => {
   color: var(--color-nav-active);
   background: transparent;
   font-weight: 500;
+}
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-mist);
+  opacity: 0.9;
 }
 .nav-item:focus-visible {
   outline: 2px solid var(--color-primary);
@@ -702,6 +1161,61 @@ onUnmounted(() => {
   }
   .nav-item.active {
     background: var(--color-nav-glider);
+  }
+  /* 移动端菜单项是整行，HOT 跟着文字走，避免被推到屏幕边缘裁切 */
+  .nav-hot {
+    position: static;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .nav-hot-text {
+    transform: none;
+  }
+  .nav-new {
+    position: static;
+    margin-left: 6px;
+    vertical-align: 1px;
+  }
+  .nav-new-text {
+    transform: none;
+  }
+  .nav-view {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .nav-view .nav-item {
+    flex: 1;
+  }
+  .nav-mobile-caret {
+    display: inline-flex;
+    flex: none;
+  }
+  .nav-submenu {
+    position: static;
+    flex: 0 0 100%;
+    width: 100%;
+    margin: 2px 0 6px;
+    padding: 8px;
+    border-color: transparent;
+    background: var(--color-surface-muted);
+    box-shadow: none;
+    transform: none;
+    animation: none;
+  }
+  .nav-submenu::before {
+    display: none;
+  }
+  .nav-submenu::after {
+    display: none;
+  }
+  .is-overlay .nav-mobile-caret {
+    color: rgba(255, 255, 255, 0.72);
+  }
+  .is-overlay .nav-submenu {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: transparent;
   }
 }
 </style>

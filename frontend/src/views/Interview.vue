@@ -270,7 +270,7 @@ let scoreRaf = null
 
 const scoreColor = computed(() => {
   const s = score.value || 0
-  if (s >= 80) return 'var(--color-success)'
+  if (s >= 80) return 'var(--color-lilac)'
   if (s >= 60) return 'var(--color-warning)'
   return 'var(--color-danger)'
 })
@@ -305,7 +305,7 @@ function dimPercent(score) {
 /** 维度进度条颜色：按得分高低分档着色 */
 function dimColor(score) {
   const s = Number(score) || 0
-  if (s >= 20) return 'var(--color-success)'
+  if (s >= 20) return 'var(--color-lilac)'
   if (s >= 12) return 'var(--color-warning)'
   return 'var(--color-danger)'
 }
@@ -1646,7 +1646,7 @@ onBeforeUnmount(cleanup)
   font-size: 13px;
   font-weight: 500;
 }
-.rating-excellent { background: var(--color-success-bg); color: var(--color-success); }
+.rating-excellent { background: var(--color-lilac-bg); color: var(--color-lilac-text); }
 .rating-good { background: var(--color-accent-soft); color: var(--color-accent); }
 .rating-mid { background: var(--color-warning-bg); color: var(--color-warning); }
 .rating-low { background: var(--color-danger-bg); color: var(--color-danger); }

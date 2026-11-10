@@ -13,4 +13,7 @@ public class RecommendVersionVO implements Serializable {
     private Long version;
 
     private Integer count;
+
+    /** 后端本次启动的标识；前端用于演示“每次启动项目亮一次 NEW”。 */
+    private String runVersion;
 }

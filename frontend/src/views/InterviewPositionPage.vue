@@ -2,9 +2,9 @@
   <div class="min-h-[calc(100dvh_-_56px)] bg-[var(--color-bg)]">
     <div class="mx-auto w-full max-w-[1200px] px-6 py-6">
       <!-- 页头 -->
-      <header class="flex items-start justify-between gap-4">
+      <header class="page-header-band flex items-start justify-between gap-4">
         <div class="min-w-0">
-          <h1 class="page-title-anim text-[22px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">
+          <h1 class="page-title page-title-anim text-[22px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">
             {{ stage === 'permission' ? '面试前设备检查' : (incomingJdText ? '确认面试岗位' : '选择面试岗位') }}
           </h1>
           <p class="mt-2 max-w-2xl text-[13px] leading-[1.7] text-[var(--color-text-3)]">

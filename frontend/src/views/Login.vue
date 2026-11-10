@@ -200,7 +200,7 @@ async function handleLogin() {
       rememberMe: loginForm.rememberMe
     })
     ElMessage.success('登录成功')
-    router.push(route.query.redirect || '/jobmatch')
+    router.push(route.query.redirect || '/')
   } catch (e) {
     loadCaptcha()
   } finally {
@@ -360,7 +360,7 @@ loadCaptcha()
 
 <style scoped>
 .login-dialog {
-  border-top: 2px solid var(--color-primary);
+  border-top: 2px solid var(--color-mist);
 }
 .login-dialog :deep(.el-dialog__header) {
   padding: 14px 20px 0;
@@ -389,7 +389,7 @@ loadCaptcha()
   height: 30px;
   border-radius: 9px;
   color: #ffffff;
-  background: linear-gradient(135deg, #143f47 0%, #1f5f6b 45%, #2f9e9a 100%);
+  background: linear-gradient(135deg, #0f3b44 0%, #17505c 45%, #2f9e9a 100%);
   box-shadow: 0 2px 8px rgba(31, 95, 107, 0.24);
 }
 .auth-brand .brand-mark svg {
@@ -406,7 +406,7 @@ loadCaptcha()
   letter-spacing: -0.02em;
 }
 .auth-brand .brand-go {
-  background-image: linear-gradient(100deg, #1f5f6b 10%, #2f8f8a 90%);
+  background-image: linear-gradient(100deg, #17505c 10%, #2f8f8a 90%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
