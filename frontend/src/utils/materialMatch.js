@@ -65,7 +65,7 @@ function cnPhrases(text) {
   const out = new Set()
   const s = toText(text)
   // 先按分隔符切，再按「与/和/及/或」切，得到短语级关键词
-  const parts = s.split(/[、,，;；/|｜\n\r\t（）()\[\]【】]+/)
+  const parts = s.split(/[、,，;；/|｜\n\r\t（）()[\]【】]+/)
   for (const part of parts) {
     let p = part.trim()
     if (!p) continue

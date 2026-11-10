@@ -2919,7 +2919,6 @@ function startPhaseTimer(phaseRef, progressRef) {
 function stopPhaseTimer(timer, phaseRef, progressRef) {
   if (timer) {
     clearInterval(timer)
-    timer = null
   }
   phaseRef.value = 2
   progressRef.value = 100
