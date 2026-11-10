@@ -88,6 +88,7 @@ OfferiGo 用**一份可复用的简历素材库**作为唯一事实来源，让 
 ┌──────────────────── 前端（Vue 3 + Vite）────────────────────┐
 │ 视图：Home / JobMatch / Interview / Exam / Profile          │
 │ 状态：Pinia（user / linkage / jobView / positiveMoment）     │
+│ 数据层：TypeScript（src/api、src/stores，npm run typecheck） │
 │ UI：Element Plus + Tailwind + 自定义设计令牌（亮/暗双主题）   │
 │ 图表：ECharts   编辑器：CodeMirror   导出：jsPDF/html2canvas│
 └──────────────────────────┬──────────────────────────────────┘

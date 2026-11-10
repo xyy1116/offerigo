@@ -1,18 +1,19 @@
-import axios from 'axios'
+import axios, { type AxiosInstance, type InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import { getToken, removeToken } from '@/utils/token'
 import router from '@/router'
+import type { ApiResult } from '@/types/api'
 
-// 统一 axios 实例
-const service = axios.create({
+// 统一 axios 实例：业务码与错误文案在这里统一处理，调用方只关心 data
+const service: AxiosInstance = axios.create({
   baseURL: '/api',
   timeout: 15000
 })
 
-// 轮询/轻量请求：绕过统一错误提示，失败不影响主流程
-export function silentGet(path, params) {
+/** 轮询/轻量请求：绕过统一错误提示，失败不影响主流程 */
+export function silentGet<T = unknown>(path: string, params?: Record<string, unknown>) {
   const token = getToken()
-  return axios.get(`/api${path}`, {
+  return axios.get<ApiResult<T>>(`/api${path}`, {
     params,
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     timeout: 5000
@@ -20,7 +21,7 @@ export function silentGet(path, params) {
 }
 
 // 登录失效：回首页并自动打开登录弹窗，保留当前页作为登录后的跳转目标
-function goLogin() {
+function goLogin(): void {
   const current = router.currentRoute.value
   const redirect = current && current.path !== '/' ? current.fullPath : ''
   router.push({
@@ -31,7 +32,7 @@ function goLogin() {
 
 // 请求拦截器：附加 JWT 令牌
 service.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -48,7 +49,7 @@ service.interceptors.response.use(
     if (response.config.responseType === 'blob') {
       return response
     }
-    const res = response.data
+    const res = response.data as ApiResult
     if (res.code !== 200) {
       ElMessage.error(res.message || '请求失败')
       if (res.code === 401) {
@@ -57,10 +58,10 @@ service.interceptors.response.use(
       }
       return Promise.reject(new Error(res.message || 'Error'))
     }
-    return res
+    return res as unknown as typeof response
   },
   (error) => {
-    const status = error.response?.status
+    const status: number | undefined = error.response?.status
     const data = error.response?.data
     // 401：登录失效，引导重新登录
     if (status === 401) {
@@ -80,7 +81,7 @@ service.interceptors.response.use(
       return Promise.reject(error)
     }
     // 服务端错误
-    if (status >= 500) {
+    if (status !== undefined && status >= 500) {
       ElMessage.error('服务器繁忙，请稍后重试')
       return Promise.reject(error)
     }

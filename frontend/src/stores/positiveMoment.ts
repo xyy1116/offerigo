@@ -1,25 +1,38 @@
 import { defineStore } from 'pinia'
 
+export type MomentType = 'score_up' | 'applied' | 'material_added' | 'info_completed' | 'custom'
+
+export interface MomentPayload {
+  type?: MomentType | string
+  title?: string
+  message?: string
+  duration?: number
+}
+
+export interface Moment {
+  id: number
+  type: string
+  title: string
+  message: string
+  duration: number
+}
+
 let seq = 0
 
 /**
  * 正向成长提示：只负责「什么时候提示」与提示内容的生命周期，不定义样式。
  * 渲染层（PositiveMomentLayer）决定外观；使用者可按需替换样式方案。
- * type 约定：score_up / applied / material_added / info_completed / custom
  */
 export const usePositiveMomentStore = defineStore('positiveMoment', {
-  state: () => ({
+  state: (): { moments: Moment[] } => ({
     moments: []
   }),
   actions: {
-    /**
-     * @param {{ type?: string, title?: string, message?: string, duration?: number }} payload
-     * @returns {number|null} 提示 id
-     */
-    trigger(payload) {
+    /** 触发一条提示，返回提示 id；内容为空时不提示 */
+    trigger(payload: MomentPayload): number | null {
       if (!payload || (!payload.title && !payload.message)) return null
       const id = ++seq
-      const moment = {
+      const moment: Moment = {
         id,
         type: payload.type || 'custom',
         title: payload.title || '',
@@ -31,7 +44,7 @@ export const usePositiveMomentStore = defineStore('positiveMoment', {
       setTimeout(() => this.dismiss(id), moment.duration)
       return id
     },
-    dismiss(id) {
+    dismiss(id: number): void {
       this.moments = this.moments.filter((m) => m.id !== id)
     }
   }

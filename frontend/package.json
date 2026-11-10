@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "format": "prettier --write \"src/**/*.{js,vue,css}\""
+    "format": "prettier --write \"src/**/*.{js,vue,css}\"",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@codemirror/lang-java": "^6.0.2",
