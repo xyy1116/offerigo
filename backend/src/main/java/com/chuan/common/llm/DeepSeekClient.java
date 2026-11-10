@@ -2,6 +2,7 @@ package com.chuan.common.llm;
 
 import com.chuan.common.ai.AiSafetyGuard;
 import com.chuan.common.exception.BusinessException;
+import com.chuan.common.util.LlmText;
 import com.chuan.module.match.vo.MatchResultVO;
 import com.chuan.module.resume.dto.CareerAnalysisVO;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -247,18 +248,8 @@ public class DeepSeekClient {
         }
     }
 
+    /** 去除 Markdown 代码块并做输出脱敏，DeepSeek 的返回统一经过这里。 */
     private String stripCodeFences(String content) {
-        if (content == null) {
-            return "";
-        }
-        String trimmed = content.trim();
-        if (trimmed.startsWith("```")) {
-            int start = trimmed.indexOf('\n');
-            int end = trimmed.lastIndexOf("```");
-            if (start >= 0 && end > start) {
-                trimmed = trimmed.substring(start + 1, end).trim();
-            }
-        }
-        return AiSafetyGuard.sanitizeOutput(trimmed);
+        return AiSafetyGuard.sanitizeOutput(LlmText.stripCodeFences(content));
     }
 }

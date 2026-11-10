@@ -1,6 +1,7 @@
 package com.chuan.common.llm;
 
 import com.chuan.common.exception.BusinessException;
+import com.chuan.common.util.LlmText;
 import com.chuan.module.exam.vo.CodeTestCaseVO;
 import com.chuan.module.exam.vo.GradingItemVO;
 import com.chuan.module.exam.vo.QuestionVO;
@@ -394,17 +395,6 @@ public class ExamClient {
     }
 
     private String stripCodeFences(String content) {
-        if (content == null) {
-            return "";
-        }
-        String trimmed = content.trim();
-        if (trimmed.startsWith("```")) {
-            int start = trimmed.indexOf('\n');
-            int end = trimmed.lastIndexOf("```");
-            if (start >= 0 && end > start) {
-                return trimmed.substring(start + 1, end).trim();
-            }
-        }
-        return trimmed;
+        return LlmText.stripCodeFences(content);
     }
 }
