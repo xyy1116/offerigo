@@ -49,7 +49,8 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
+      # 宿主机端口可配置：服务器上 80 已被占用，默认走 8081
+      - "${FRONTEND_PORT:-8081}:80"
 
 volumes:
   mysql_data:
