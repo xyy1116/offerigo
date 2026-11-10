@@ -18,6 +18,8 @@ application-local.yml
 application-local.yaml
 .env
 .env.*
+# 环境变量模板必须入库
+!.env.example
 
 # IDE / 系统
 .idea/

@@ -1,0 +1,23 @@
+# 本地配置模板：复制为 application-local.yml 后填写真实值
+# application-local.yml 已被 .gitignore 忽略，切勿提交
+# 不想用配置文件时，也可以直接在启动环境里设置下列环境变量（见根目录 .env.example）
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/chuan?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: ${DB_PASSWORD:change-me}
+
+jwt:
+  secret: ${JWT_SECRET:change-me-to-a-random-secret}
+
+llm:
+  deepseek:
+    api-key: ${DEEPSEEK_API_KEY:sk-your-deepseek-key}
+  qwen-vl:
+    api-key: ${DASHSCOPE_API_KEY:sk-your-dashscope-key}
+  qwen-chat:
+    api-key: ${DASHSCOPE_API_KEY:sk-your-dashscope-key}
+  paraformer:
+    api-key: ${DASHSCOPE_API_KEY:sk-your-dashscope-key}
+  embedding:
+    api-key: ${DASHSCOPE_API_KEY:sk-your-dashscope-key}

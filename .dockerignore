@@ -1,0 +1,12 @@
+.git
+**/node_modules
+**/target
+**/dist
+backend/src/main/resources/application-local*.yml
+.env
+.env.*
+!.env.example
+docs
+.trae
+.idea
+.vscode
