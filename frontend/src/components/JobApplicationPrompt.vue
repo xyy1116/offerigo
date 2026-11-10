@@ -34,7 +34,6 @@
 
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { getToken } from '@/utils/token'
 import { confirmApplication, deleteApplication, getApplicationReminders } from '@/api/jobmatch'
 import { usePositiveMomentStore } from '@/stores/positiveMoment'

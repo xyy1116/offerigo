@@ -3,6 +3,8 @@
 **/target
 **/dist
 backend/src/main/resources/application-local*.yml
+resumes
+uploads
 .env
 .env.*
 !.env.example

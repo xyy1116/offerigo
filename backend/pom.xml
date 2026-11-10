@@ -39,11 +39,6 @@
         </dependency>
 
         <!-- 邮件发送（邮箱投稿系统代发与回执） -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
-        </dependency>
-
         <!-- 参数校验 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
