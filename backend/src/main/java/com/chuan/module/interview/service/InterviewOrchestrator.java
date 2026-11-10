@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -61,6 +62,9 @@ public class InterviewOrchestrator {
 
     /** 每场面试最多压力提问次数 */
     private static final int MAX_PRESSURE = 3;
+
+    /** 开场简报最长等待时间：超时直接放弃，不拖住第一个问题。 */
+    private static final int BRIEF_TIMEOUT_SECONDS = 15;
 
     /** 超时提醒固定文案：提醒不是新题，因此不走大模型，避免被当成一轮提问 */
     private static final String[] NO_ANSWER_NUDGES = {
@@ -241,6 +245,7 @@ public class InterviewOrchestrator {
     private final InterviewService interviewService;
     private final QuestionBankService questionBankService;
     private final ResumeService resumeService;
+    private final InterviewBriefAgent interviewBriefAgent;
 
     /** sessionId -> 面试会话 */
     private final Map<String, InterviewSession> sessions = new ConcurrentHashMap<>();
@@ -250,6 +255,7 @@ public class InterviewOrchestrator {
 
     /** 用于长回答断句合并的调度器 */
     private final ScheduledExecutorService asrScheduler = Executors.newSingleThreadScheduledExecutor();
+    private final ExecutorService briefExecutor = Executors.newSingleThreadExecutor();
 
     // ==================== 连接生命周期 ====================
 
@@ -459,6 +465,21 @@ public class InterviewOrchestrator {
         askNext(s, "我们继续进行面试。");
     }
 
+    /** 开场前跑一次工具调研；失败、超时或无结果时系统提示里不出现简报，面试照常进行。 */
+    private void prepareBrief(InterviewSession s) {
+        if (s.getInterviewerBrief() != null) {
+            return;
+        }
+        Future<String> future = briefExecutor.submit(() -> interviewBriefAgent.buildBrief(s));
+        try {
+            s.setInterviewerBrief(future.get(BRIEF_TIMEOUT_SECONDS, TimeUnit.SECONDS));
+        } catch (Exception e) {
+            future.cancel(true);
+            s.setInterviewerBrief("");
+            log.warn("面试官简报生成超时或失败，按无简报继续: {}", e.getMessage());
+        }
+    }
+
     /** 全新面试开场：引导放松并问履历概览第一题。 */
     private void askFirstQuestion(InterviewSession s) {
         send(s, "thinking", Map.of("value", true));
@@ -468,6 +489,7 @@ public class InterviewOrchestrator {
                 return;
             }
             try {
+                prepareBrief(s);
                 TurnDecision d = generateTurn(s,
                         "面试正式开始。请用一句话自然开场，然后开启【履历概览】阶段，发出本阶段第1个问题（如自我介绍或概览TA的经历）。",
                         0, MAX_PRESSURE);
@@ -1015,6 +1037,10 @@ public class InterviewOrchestrator {
             for (int i = 0; i < bank.size(); i++) {
                 sb.append("  ").append(i + 1).append(". ").append(bank.get(i)).append("\n");
             }
+        }
+        if (StringUtils.hasText(s.getInterviewerBrief())) {
+            sb.append("5. 调研发现（由工具检索候选人素材库与题库得到，可作为深挖方向，仍需以简历事实为准）：\n")
+                    .append(s.getInterviewerBrief().trim()).append("\n");
         }
 
         String family = s.getRoleFamily();

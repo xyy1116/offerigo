@@ -1,6 +1,8 @@
 package com.chuan.common.llm;
 
+import com.chuan.common.ai.AiSafetyGuard;
 import com.chuan.common.exception.BusinessException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 /**
@@ -114,7 +117,60 @@ public class QwenChatClient {
             log.error("通义千问流式调用失败", e);
             throw new BusinessException("AI 面试官流式响应失败，请稍后重试");
         }
-        return full.toString();
+        return AiSafetyGuard.sanitizeOutput(full.toString());
+    }
+
+    /**
+     * 工具调用（Function Calling）：模型自行决定调用哪些工具、传什么参数，
+     * 由本方法执行后把结果回填，直到模型给出最终文本或达到轮数上限。
+     *
+     * @param executor (工具名, JSON 参数字符串) -> 工具结果文本
+     */
+    public String chatWithTools(List<Map<String, Object>> messages,
+                                List<Map<String, Object>> tools,
+                                BiFunction<String, String, String> executor,
+                                int maxRounds) {
+        if (!StringUtils.hasText(apiKey)) {
+            throw new BusinessException("未配置通义千问 API Key，请设置环境变量 DASHSCOPE_API_KEY");
+        }
+        List<Map<String, Object>> conversation = new ArrayList<>(messages);
+        for (int round = 0; round < maxRounds; round++) {
+            Map<String, Object> body = new HashMap<>();
+            body.put("model", model);
+            body.put("temperature", 0.2);
+            body.put("messages", conversation);
+            body.put("tools", tools);
+            body.put("tool_choice", "auto");
+            JsonNode message = postChat(body);
+            JsonNode toolCalls = message.path("tool_calls");
+            if (!toolCalls.isArray() || toolCalls.isEmpty()) {
+                return AiSafetyGuard.sanitizeOutput(message.path("content").asText(""));
+            }
+            conversation.add(objectMapper.convertValue(message, new TypeReference<Map<String, Object>>() {
+            }));
+            for (JsonNode call : toolCalls) {
+                String name = call.path("function").path("name").asText("");
+                String arguments = call.path("function").path("arguments").asText("{}");
+                String result;
+                try {
+                    result = executor.apply(name, arguments);
+                } catch (Exception e) {
+                    log.warn("工具执行失败: {} - {}", name, e.getMessage());
+                    result = "{\"error\":\"工具执行失败\"}";
+                }
+                Map<String, Object> toolMessage = new HashMap<>();
+                toolMessage.put("role", "tool");
+                toolMessage.put("tool_call_id", call.path("id").asText(""));
+                toolMessage.put("content", result);
+                conversation.add(toolMessage);
+            }
+        }
+        // 轮数用尽：再给模型一次不带工具的机会，让它基于已取回的数据收口
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", model);
+        body.put("temperature", 0.2);
+        body.put("messages", conversation);
+        return AiSafetyGuard.sanitizeOutput(postChat(body).path("content").asText(""));
     }
 
     /** 语音识别文本纠错：结合面试岗位领域修正同音字、错别字与识别误差，仅返回修正后的文本。 */
@@ -253,7 +309,7 @@ public class QwenChatClient {
                         + "{\"companies\":[\"公司名称1\",\"公司名称2\"]}"));
         messages.add(Map.of("role", "user", "content",
                 "岗位名称：" + (jobName == null ? "" : jobName)
-                        + "\n岗位要求：" + (jobRequirement == null ? "" : jobRequirement)));
+                        + "\n" + AiSafetyGuard.wrapUntrusted(jobRequirement)));
         return chatJson(messages, 0.0);
     }
 
@@ -286,7 +342,7 @@ public class QwenChatClient {
                         + "8. salary：薪资范围（如「15-25K」「12-20万/年」「面议」），原文未提及返回空字符串。\n"
                         + "严格按 JSON 输出，不要输出 JSON 以外的内容、不要 Markdown 代码块，结构：\n"
                         + "{\"jobName\":\"岗位名称\",\"jobRequirement\":\"标准化岗位要求全文\",\"companyName\":\"招聘单位\",\"email\":\"招聘邮箱\",\"location\":\"工作地点\",\"salary\":\"薪资范围\",\"techStack\":\"核心技术栈\",\"jobType\":\"岗位类型\"}"));
-        messages.add(Map.of("role", "user", "content", "【招聘原文】\n" + content + "\n请按规范标准化并输出岗位记录。"));
+        messages.add(Map.of("role", "user", "content", "【招聘原文】\n" + AiSafetyGuard.wrapUntrusted(content) + "\n请按规范标准化并输出岗位记录。"));
         return doChat(messages, true, 0.1);
     }
 
@@ -331,7 +387,7 @@ public class QwenChatClient {
                         + "7. jobType：岗位类型标签，2-8 字（如 大模型、AI架构师、AI安全、AI产品、AI应用、算法工程师、Java开发、前端开发、测试工程师、产品经理、运营、设计）。按岗位具体方向归类，不要把所有 AI 岗位都写成「大模型」；禁止输出「其他」。\n"
                         + "严格按 JSON 输出，不要输出 JSON 以外内容、不要 Markdown 代码块：\n"
                         + "{\"jobName\":\"\",\"companyName\":\"\",\"location\":\"\",\"salary\":\"\",\"jobRequirement\":\"\",\"techStack\":\"\",\"jobType\":\"\"}"));
-        messages.add(Map.of("role", "user", "content", "【招聘原文】\n" + content + "\n请标准化并输出岗位记录。"));
+        messages.add(Map.of("role", "user", "content", "【招聘原文】\n" + AiSafetyGuard.wrapUntrusted(content) + "\n请标准化并输出岗位记录。"));
         return doChat(messages, true, 0.1);
     }
 
@@ -395,10 +451,6 @@ public class QwenChatClient {
     }
 
     private String doChat(List<Map<String, Object>> messages, boolean jsonMode, double temperature) {
-        if (!StringUtils.hasText(apiKey)) {
-            throw new BusinessException("未配置通义千问 API Key，请设置环境变量 DASHSCOPE_API_KEY");
-        }
-
         Map<String, Object> body = new HashMap<>();
         body.put("model", model);
         body.put("temperature", temperature);
@@ -406,18 +458,23 @@ public class QwenChatClient {
         if (jsonMode) {
             body.put("response_format", Map.of("type", "json_object"));
         }
+        String content = postChat(body).path("content").asText("");
+        return AiSafetyGuard.sanitizeOutput(jsonMode ? stripCodeFences(content) : content);
+    }
 
+    /** 发起一次 chat/completions 请求，返回 choices[0].message 节点。 */
+    private JsonNode postChat(Map<String, Object> body) {
+        if (!StringUtils.hasText(apiKey)) {
+            throw new BusinessException("未配置通义千问 API Key，请设置环境变量 DASHSCOPE_API_KEY");
+        }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(apiKey);
-
         try {
             String url = baseUrl + "/chat/completions";
             ResponseEntity<String> response = restTemplate.exchange(
                     url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
-            JsonNode root = objectMapper.readTree(response.getBody());
-            String content = root.path("choices").path(0).path("message").path("content").asText();
-            return jsonMode ? stripCodeFences(content) : content;
+            return objectMapper.readTree(response.getBody()).path("choices").path(0).path("message");
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {

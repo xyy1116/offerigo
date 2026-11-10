@@ -44,6 +44,9 @@ public class InterviewSession {
     private String questionBankKey;
     /** 本场锁定的岗位族（如 A-后端、B-产品、A-后端+F-Agent），开场由模型判断后固定 */
     private String roleFamily;
+
+    /** 面试官调研简报：开场前由 Agent 通过工具检索素材库与题库生成，注入系统提示 */
+    private String interviewerBrief;
     /** 当前所处阶段：overview/tech/project/scenario/reverse */
     private String stage;
     /** 当前阶段已提出的正式问题数 */

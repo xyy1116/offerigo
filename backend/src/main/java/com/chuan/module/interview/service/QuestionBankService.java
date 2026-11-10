@@ -81,6 +81,26 @@ public class QuestionBankService {
         return questions == null ? new ArrayList<>() : questions;
     }
 
+    /** 按关键词跨方向检索题库，供 AI 通过工具调用按当前考察点取题。 */
+    public List<String> search(String keyword, int limit) {
+        List<String> result = new ArrayList<>();
+        if (keyword == null || keyword.isBlank()) {
+            return result;
+        }
+        String needle = keyword.toLowerCase();
+        for (List<String> questions : bank.values()) {
+            for (String question : questions) {
+                if (result.size() >= limit) {
+                    return result;
+                }
+                if (question.toLowerCase().contains(needle)) {
+                    result.add(question);
+                }
+            }
+        }
+        return result;
+    }
+
     private boolean containsAny(String text, String... keywords) {
         for (String keyword : keywords) {
             if (text.contains(keyword)) {
