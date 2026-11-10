@@ -1,5 +1,6 @@
 package com.chuan.common.llm;
 
+import com.chuan.common.ai.AiSafetyGuard;
 import com.chuan.common.exception.BusinessException;
 import com.chuan.module.match.vo.MatchResultVO;
 import com.chuan.module.resume.dto.CareerAnalysisVO;
@@ -213,7 +214,7 @@ public class DeepSeekClient {
         }
         String userPrompt = "【目标岗位】\n" + (jobName == null ? "" : jobName)
                 + "\n【目标公司】\n" + (companyName == null ? "" : companyName)
-                + "\n\n【岗位要求】\n" + (jobRequirement == null ? "" : jobRequirement)
+                + "\n\n【岗位要求】\n" + AiSafetyGuard.wrapUntrusted(jobRequirement)
                 + "\n\n【候选人简历】\n" + resumeSummary
                 + "\n\n请只使用与岗位要求相关的简历内容，无关内容不要写入。";
         return chatJson(COVER_LETTER_PROMPT, userPrompt, 0.4);
@@ -255,9 +256,9 @@ public class DeepSeekClient {
             int start = trimmed.indexOf('\n');
             int end = trimmed.lastIndexOf("```");
             if (start >= 0 && end > start) {
-                return trimmed.substring(start + 1, end).trim();
+                trimmed = trimmed.substring(start + 1, end).trim();
             }
         }
-        return trimmed;
+        return AiSafetyGuard.sanitizeOutput(trimmed);
     }
 }

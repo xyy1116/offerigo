@@ -30,6 +30,9 @@ public class CodeSandboxService {
     private static final int MAX_CASES = 3;
     private final Semaphore slots = new Semaphore(2);
 
+    @Value("${exam.code.enabled:true}")
+    private boolean enabled = true;
+
     @Value("${exam.code.timeout-ms:3000}")
     private long timeoutMs;
 
@@ -43,6 +46,9 @@ public class CodeSandboxService {
     private int maxCode;
 
     public boolean supports(String language) {
+        if (!enabled) {
+            return false;
+        }
         String lang = normalizeLanguage(language);
         return "java".equals(lang) || "javascript".equals(lang);
     }
