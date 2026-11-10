@@ -1,0 +1,13 @@
+{
+  "name": "offerigo-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "把 OfferiGo 的岗位推荐、简历素材、目标岗位以 MCP 工具形式暴露给外部 AI 客户端",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
