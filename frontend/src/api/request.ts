@@ -21,7 +21,16 @@ export function silentGet<T = unknown>(path: string, params?: Record<string, unk
 }
 
 // 登录失效：回首页并自动打开登录弹窗，保留当前页作为登录后的跳转目标
-function goLogin(): void {
+/** 并发请求同时 401 时只提示/跳转一次，避免刷屏 */
+let redirecting = false
+
+function goLogin(message?: string): void {
+  if (redirecting) return
+  redirecting = true
+  setTimeout(() => {
+    redirecting = false
+  }, 2000)
+  if (message) ElMessage.error(message)
   const current = router.currentRoute.value
   const redirect = current && current.path !== '/' ? current.fullPath : ''
   router.push({
@@ -50,12 +59,14 @@ service.interceptors.response.use(
       return response
     }
     const res = response.data as ApiResult
+    // 登录失效先处理：清 token 并跳登录，提示由 goLogin 统一去重
+    if (res.code === 401) {
+      removeToken()
+      goLogin('登录已过期，请重新登录')
+      return Promise.reject(new Error(res.message || '未认证或登录已过期'))
+    }
     if (res.code !== 200) {
       ElMessage.error(res.message || '请求失败')
-      if (res.code === 401) {
-        removeToken()
-        goLogin()
-      }
       return Promise.reject(new Error(res.message || 'Error'))
     }
     return res as unknown as typeof response
@@ -65,9 +76,8 @@ service.interceptors.response.use(
     const data = error.response?.data
     // 401：登录失效，引导重新登录
     if (status === 401) {
-      ElMessage.error('登录已过期，请重新登录')
       removeToken()
-      goLogin()
+      goLogin('登录已过期，请重新登录')
       return Promise.reject(error)
     }
     // 请求超时
