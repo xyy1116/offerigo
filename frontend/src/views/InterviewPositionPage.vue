@@ -203,14 +203,18 @@
                 />
                 <span class="flex-1 text-[var(--color-text)]">麦克风</span>
                 <span :class="micGranted ? 'text-[var(--color-success)]' : 'text-[var(--color-text-3)]'">
-                  {{ micGranted ? '已授权' : '必需' }}
+                  {{ micUnavailable ? '不可用' : micGranted ? '已授权' : '必需' }}
                 </span>
               </li>
             </ul>
             <p class="mt-3 text-[12px] leading-[1.6] text-[var(--color-text-3)]">
-              麦克风为必需项；摄像头可选，画面仅本地预览，不会上传。
+              <template v-if="micUnavailable">
+                当前通过 HTTP 访问，浏览器禁止使用麦克风。可直接开始面试，用文字作答。
+              </template>
+              <template v-else>麦克风为必需项；摄像头可选，画面仅本地预览，不会上传。</template>
             </p>
             <BaseButton
+              v-if="!micUnavailable"
               variant="secondary"
               class="mt-4 w-full"
               :disabled="requesting"
@@ -227,12 +231,14 @@
             <ArrowLeft :size="14" aria-hidden="true" />
             返回重选岗位
           </BaseButton>
-          <BaseButton :disabled="!micGranted || requesting" @click="$emit('start')">
+          <BaseButton :disabled="(!micGranted && !micUnavailable) || requesting" @click="$emit('start')">
             开始面试
             <ArrowRight :size="14" aria-hidden="true" />
           </BaseButton>
         </div>
-        <p v-if="!micGranted" class="mt-2 text-[12px] text-[var(--color-text-3)]">授权麦克风后即可开始面试。</p>
+        <p v-if="!micGranted" class="mt-2 text-[12px] text-[var(--color-text-3)]">
+          {{ micUnavailable ? '当前环境无法录音，进入后可打字作答。' : '授权麦克风后即可开始面试。' }}
+        </p>
       </template>
     </div>
   </div>
@@ -270,6 +276,8 @@ const props = defineProps({
   localStream: { type: Object, default: null },
   cameraGranted: { type: Boolean, default: false },
   micGranted: { type: Boolean, default: false },
+  /** 非 HTTPS 环境下浏览器禁用麦克风，改为纯文字作答 */
+  micUnavailable: { type: Boolean, default: false },
   requesting: { type: Boolean, default: false }
 })
 

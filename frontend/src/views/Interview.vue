@@ -13,6 +13,7 @@
       :local-stream="localStream"
       :camera-granted="cameraGranted"
       :mic-granted="micGranted"
+      :mic-unavailable="micUnavailable"
       :requesting="requesting"
       @use-custom="useCustomPosition"
       @next="stage = 'permission'"
@@ -235,6 +236,10 @@ const elapsedText = computed(() => {
 })
 
 const messages = ref([])
+/** 非 HTTPS 环境下浏览器禁用 getMedia，面试降级为纯文字作答 */
+const micUnavailable = computed(
+  () => !window.isSecureContext || !navigator.mediaDevices?.getUserMedia
+)
 /** Agent 开场调研过程：每次工具调用一条，展示「查了什么、查到几条」 */
 const agentSteps = ref([])
 /** 当前面试阶段标识（overview/tech/project/scenario/reverse） */
