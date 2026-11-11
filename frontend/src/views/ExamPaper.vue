@@ -66,9 +66,9 @@
           :rows="4" placeholder="请输入你的答案" />
         <div v-else class="coding-block">
           <div class="coding-toolbar">
-            <el-tag size="small" type="info" class="code-lang">{{ languageLabel(codeLanguage) }}</el-tag>
+            <el-tag size="small" type="info" class="code-lang">{{ languageLabel(answers[qi].language) }}</el-tag>
             <span class="coding-hint">
-              {{ codingHints[codeLanguage] || '从标准输入读取，向标准输出打印' }}
+              {{ codingHints[answers[qi].language] || '从标准输入读取，向标准输出打印' }}
             </span>
             <div class="editor-actions">
               <button
@@ -336,7 +336,8 @@ onMounted(async () => {
   answers.value = (paper.value.questions || []).map((q) => ({
     answer: '',
     multi: [],
-    language: codeLanguage.value,
+    // 编程语言按题目自身方向判定：前端题用 JavaScript，Python 题用 Python，判不出来才用整卷语言
+    language: q.type === 'coding' ? resolveQuestionLanguage(q) : codeLanguage.value,
     running: false,
     runResult: null,
     debugRunning: false,
@@ -488,6 +489,24 @@ function resolveCodeLanguage() {
   }
   if (preferred && supported.includes(preferred)) return preferred
   return supported.includes('java') ? 'java' : supported[0] || 'javascript'
+}
+
+/**
+ * 单题的编程语言：优先看题目自己的标签（知识点 / 来源 / 题干），
+ * 避免「AI 全栈」这类技术栈很杂的岗位，把前端题也标成 Python。
+ */
+function resolveQuestionLanguage(q) {
+  const hint = [q.knowledgePoint, q.sourceName, q.sourceCompany, q.stem]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  const supported = codeLanguages.value.map((l) => l.value)
+  const prefer = (value) => (supported.includes(value) ? value : '')
+  if (/前端|vue|react|javascript|\bweb\b|浏览器/.test(hint)) return prefer('javascript') || codeLanguage.value
+  if (/python/.test(hint)) return prefer('python') || codeLanguage.value
+  if (/c\+\+|cpp/.test(hint)) return prefer('cpp') || codeLanguage.value
+  if (/java/.test(hint)) return prefer('java') || codeLanguage.value
+  return codeLanguage.value
 }
 
 function languageLabel(value) {
