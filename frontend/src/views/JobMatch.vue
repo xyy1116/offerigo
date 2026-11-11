@@ -1493,7 +1493,8 @@ const mergedJobs = computed(() =>
 )
 
 // 今日推荐岗位：用与目标岗位相同的引擎、按当前素材重算，保证榜单内分数可直接比较
-const recommendJobEntries = computed(() => (recommendJobs.value || []).map((rec) => {
+const recommendJobEntries = computed(() => {
+  const list = (recommendJobs.value || []).map((rec) => {
   const job = {
     id: `rec-${rec.id}`,
     recommendId: rec.id,
@@ -1516,7 +1517,11 @@ const recommendJobEntries = computed(() => (recommendJobs.value || []).map((rec)
     match.jobName = job.jobName
   }
   return { ...job, match }
-}))
+  })
+  // 后端给的是候选池，这里按本地引擎的真实匹配度排序，只展示最高的 10 条
+  list.sort((a, b) => (b.match?.score || 0) - (a.match?.score || 0))
+  return list.slice(0, 10)
+})
 
 function recommendLinkKey(job) {
   return String((job && (job.jobLink || job.sourceUrl)) || '').trim().replace(/\/+$/, '').toLowerCase()

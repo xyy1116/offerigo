@@ -53,6 +53,8 @@ public class JobRecommendService {
     private static final int MAX_BATCH = 100;
     /** 推荐页固定展示匹配度最高的 10 条。 */
     private static final int RECOMMEND_SIZE = 10;
+    /** 返回给前端的候选池：前端按本地引擎重新打分后取前 10，避免只按语义相似度选出的 10 条分数偏低。 */
+    private static final int RECOMMEND_POOL = 30;
     /** 后端本次启动标识：重启后 NEW! 重新亮一次，方便演示。 */
     private static final String RUN_VERSION = String.valueOf(System.currentTimeMillis());
 
@@ -141,7 +143,7 @@ public class JobRecommendService {
                 .reversed()
                 .thenComparing(RecommendJobVO::getCrawlTime, Comparator.nullsLast(Comparator.reverseOrder()))
                 .thenComparing(RecommendJobVO::getId, Comparator.nullsLast(Comparator.reverseOrder())));
-        return selectTop(result);
+        return selectTop(result, RECOMMEND_POOL);
     }
 
     /** 昨天及更早加入目标岗位的识别键（当天加入的仍留在推荐里，置灰显示）；含历史推荐映射对应的爬取岗位。 */
@@ -197,17 +199,17 @@ public class JobRecommendService {
     }
 
     /** 按来源轮转取岗，保证最终 10 条里每个有岗位的来源都能出现，再按匹配度排序。 */
-    private List<RecommendJobVO> selectTop(List<RecommendJobVO> sorted) {
+    private List<RecommendJobVO> selectTop(List<RecommendJobVO> sorted, int limit) {
         Map<String, List<RecommendJobVO>> bySource = new LinkedHashMap<>();
         for (RecommendJobVO vo : sorted) {
             String source = vo.getSource() == null ? "" : vo.getSource();
             bySource.computeIfAbsent(source, key -> new ArrayList<>()).add(vo);
         }
-        List<RecommendJobVO> picked = new ArrayList<>(RECOMMEND_SIZE);
-        for (int round = 0; picked.size() < RECOMMEND_SIZE; round++) {
+        List<RecommendJobVO> picked = new ArrayList<>(limit);
+        for (int round = 0; picked.size() < limit; round++) {
             boolean added = false;
             for (List<RecommendJobVO> list : bySource.values()) {
-                if (picked.size() >= RECOMMEND_SIZE) {
+                if (picked.size() >= limit) {
                     break;
                 }
                 if (round < list.size()) {
