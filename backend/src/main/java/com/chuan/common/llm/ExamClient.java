@@ -2,6 +2,7 @@ package com.chuan.common.llm;
 
 import com.chuan.common.exception.BusinessException;
 import com.chuan.common.util.LlmText;
+import com.chuan.common.util.PromptLoader;
 import com.chuan.module.exam.vo.CodeTestCaseVO;
 import com.chuan.module.exam.vo.GradingItemVO;
 import com.chuan.module.exam.vo.QuestionVO;
@@ -35,98 +36,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ExamClient {
 
-    private static final String TECHSTACK_PROMPT = """
-            你是一名资深招聘专家与岗位画像分析师。请根据给定的岗位信息，判断岗位类别并提取核心技术栈要求。
-            严格按 JSON 格式输出，不要输出 JSON 以外的任何内容，不要使用 Markdown 代码块。输出结构如下：
-            {
-              "jobTitle": "岗位名称",
-              "category": "technical 或 non-technical",
-              "techStacks": ["技术栈1", "技术栈2"]
-            }
-            要求：
-            1. category 只能是以下两个值之一：
-               - "technical"：该岗位属于计算机/软件/互联网技术类（如软件开发、测试、运维、算法、数据、前端、后端、移动端、嵌入式、网络安全等），要求编程或专业技术能力；
-               - "non-technical"：该岗位属于非技术类（如销售、市场、行政、人力资源、财务、运营、客服、产品等），不要求编程能力。
-            2. techStacks 只保留岗位真正要求掌握的技术/工具/框架（如 Java、Vue、MySQL、Spring、Redis 等），按重要程度从高到低排列；非技术岗位可输出空数组。
-            3. 不需要写掌握程度，只要名称简写即可。
-            """;
+    private static final String TECHSTACK_PROMPT = PromptLoader.get("exam-techstack");
 
-    private static final String GENERATE_PROMPT = """
-            你是一名资深技术笔试命题专家。请根据岗位信息与核心技术栈，定向生成贴合岗位实际的笔试练习题。
-            严格按 JSON 格式输出，不要输出 JSON 以外的任何内容，不要使用 Markdown 代码块。输出结构如下：
-            {
-              "questions": [
-                {
-                  "type": "single|multiple|short_answer|coding",
-                  "stem": "题干",
-                  "options": ["A. 选项A", "B. 选项B"],
-                  "answer": "标准答案",
-                  "analysis": "详细解析",
-                  "difficulty": "basic|middle|advanced",
-                  "knowledgePoint": "考查知识点",
-                  "testCases": ["用例描述"],
-                  "codeTestCases": [
-                    {"input": "标准输入文本", "expectedOutput": "期望标准输出", "explanation": "用例说明"}
-                  ]
-                }
-              ]
-            }
-            要求：
-            1. type 只能取 single(单选)、multiple(多选)、short_answer(简答)、coding(编程) 四种。
-            2. single/multiple 必须提供 options 数组；answer 填选项字母（单选如 "A"，多选如 "A,C"）。
-            3. short_answer 的 answer 填参考答案要点；coding 的 answer 填参考实现或核心思路，并填 testCases 数组描述至少 2 个测试用例（输入与期望输出）。
-            4. coding 必须额外提供 codeTestCases，至少 2 个，input 为程序从标准输入读取的完整文本，expectedOutput 为程序写到标准输出的期望文本；题干中需明确输入输出格式。答案需能在 JavaScript 或 Java 中通过标准输入输出实现。
-            5. analysis 针对每道题给出清晰解析。
-            6. difficulty 按基础:中级:高级约 5:3:2 分配。
-            7. 题目内容必须紧扣岗位技术栈，避免无关的通用题。
-            8. 同一批题目之间不得重复或高度相似；编程题必须选择不同题目，不要改写同一道题。
-            9. 所有 answer 与 analysis 均需简洁明了、通俗易懂，符合人性化表达习惯，避免堆砌晦涩专业术语：简答题用要点式列点，编程题只给出核心思路与关键代码片段，避免长篇赘述。
-            """;
+    private static final String GENERATE_PROMPT = PromptLoader.get("exam-generate");
 
-    private static final String GRADE_PROMPT = """
-            你是一名资深技术笔试阅卷官。请对用户的主观题/编程题作答进行专业批改。
-            严格按 JSON 格式输出，不要输出 JSON 以外的任何内容，不要使用 Markdown 代码块。输出结构如下：
-            {
-              "score": 0-该题满分的数字,
-              "correct": true|false,
-              "analysis": "本题评析与正确答案要点",
-              "errorReason": "指出用户答案的错误或不完整之处（若无则写'基本正确'）",
-              "extension": "围绕该知识点给出的延伸学习建议"
-            }
-            要求：
-            1. 判断 correct 的核心依据是「用户答案的核心内容与逻辑是否正确」，而非是否与标准答案逐字一致。允许非关键性表述差异（同义改写、语序调整、措辞更口语化或更简洁）。只要抓住关键得分点、核心结论与逻辑成立，即可判定 correct=true。
-            2. 仅当存在实质性错误（核心要点缺失、方向性错误、事实错误、逻辑错误）时才判定 correct=false，不要因措辞差异或省略非关键细节而判错。
-            3. 基于关键词命中、逻辑完整性、技术准确性综合评分，按正确程度给分；核心正确但表述有差异时，可给满分或接近满分。
-            4. 编程题请对照题目要求与测试用例，静态评估代码的正确性、边界处理与复杂度，不真实执行代码。
-            5. analysis、errorReason、extension 均需简洁明了、通俗易懂，符合人性化表达，避免过度技术化或晦涩术语。
-            """;
+    private static final String GRADE_PROMPT = PromptLoader.get("exam-grade");
 
-    private static final String REAL_ANSWER_PROMPT = """
-            你是一名资深技术面试官。下面是从公开大厂面经聚合库抓取的真实面试题（部分只有题干）。
-            请为每道题补充难度、知识点、参考答案要点和解析。
-            严格按 JSON 格式输出，不要输出 JSON 以外的任何内容，不要使用 Markdown 代码块。输出结构如下：
-            {
-              "items": [
-                {
-                  "index": 1,
-                  "difficulty": "basic|middle|advanced",
-                  "knowledgePoint": "考查知识点",
-                  "answer": "参考答案要点",
-                  "analysis": "简要解析",
-                  "codeTestCases": [
-                    {"input": "标准输入文本", "expectedOutput": "期望标准输出", "explanation": "用例说明"}
-                  ]
-                }
-              ]
-            }
-            要求：
-            1. index 必须与题目前的序号一致，不要增删题目。
-            2. 回答要准确，符合主流技术面试的标准答案；不确定的内容不要编造，可写“开放题，重点考察思路”。
-            3. short_answer 用要点式回答；coding 给出核心思路、关键步骤与复杂度，必要时给关键代码片段。
-            4. coding 题目必须额外提供 codeTestCases（至少 2 个），input 为程序从标准输入读取的完整文本，expectedOutput 为期望标准输出；需自行定义清晰的输入输出格式，答案应能通过 JavaScript 或 Java 的标准输入输出实现。
-            5. analysis 简洁说明考点与易错点，避免长篇大论。
-            6. 难度按题目真实难度判断，不要全部给 middle。
-            """;
+    private static final String REAL_ANSWER_PROMPT = PromptLoader.get("exam-real-answer");
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;

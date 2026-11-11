@@ -3,6 +3,7 @@ package com.chuan.module.interview.service;
 import com.chuan.common.exception.BusinessException;
 import com.chuan.common.llm.ParaformerRealtimeClient;
 import com.chuan.common.llm.QwenChatClient;
+import com.chuan.common.util.PromptLoader;
 import com.chuan.module.interview.entity.InterviewRecord;
 import com.chuan.module.interview.vo.DimensionScore;
 import com.chuan.module.interview.vo.InterviewReportVO;
@@ -945,32 +946,7 @@ public class InterviewOrchestrator {
     }
 
     /** 评分 Agent 系统提示词：固定维度 + 锚点区间 + 强制证据，总分由代码聚合。 */
-    private static final String SCORING_SYSTEM_PROMPT = """
-            你是面试评估专家。请只根据【岗位 JD、候选人简历、完整面试对话】评分，不得脑补未出现的内容。
-
-            固定 4 个维度，每个 0-25 分。每个维度必须先写 evidence（引用候选人原话或具体表现），再按锚点给分；
-            没有 evidence 时分数不得超过 10；该维度本轮未充分考察时不得超过 12，并在 comment 注明“本轮未充分考察”。
-            “专业能力深度”按候选人所在岗位族评价；非技术岗不要用编程、架构、平台治理标准打分。
-
-            锚点：
-            - 专业能力深度：0-5 无有效信息或答错；6-10 只知名词；11-15 懂方法但缺取舍；16-20 有取舍、踩坑复盘；21-25 能对比替代方案并量化。
-            - 岗位匹配度：0-5 方向不符；6-10 部分匹配；11-15 基本匹配；16-20 高度匹配且有相关项目；21-25 经验直接对应且可迁移。
-            - 问题解决能力：0-5 无思路；6-10 有思路无落地；11-15 能落地但不深入；16-20 有取舍和验证；21-25 系统化拆解且能反思。
-            - 表达逻辑：0-5 混乱；6-10 勉强听懂；11-15 有结构；16-20 重点突出；21-25 简洁精准有说服力。
-
-            只输出一个 JSON 对象，不要代码块、不要任何其他文字。结构与字段：
-            {
-              "summary": "一句话总体评价",
-              "dimensions": [
-                {"name":"专业能力深度","score":0,"comment":"一句话评语","evidence":"原话或具体表现"},
-                {"name":"岗位匹配度","score":0,"comment":"一句话评语","evidence":"原话或具体表现"},
-                {"name":"问题解决能力","score":0,"comment":"一句话评语","evidence":"原话或具体表现"},
-                {"name":"表达逻辑","score":0,"comment":"一句话评语","evidence":"原话或具体表现"}
-              ],
-              "strengths": ["核心优势1", "核心优势2"],
-              "weaknesses": ["具体可执行的待提升点1", "具体可执行的待提升点2"]
-            }
-            """;
+    private static final String SCORING_SYSTEM_PROMPT = PromptLoader.get("interview-scoring");
 
     private InterviewReportVO generateReport(InterviewSession s) {
         int durationMinutes = (int) Math.max(1, (System.currentTimeMillis() - s.getStartTime()) / 60000);

@@ -440,6 +440,7 @@
           <h3 class="panel-title">我的简历素材</h3>
           <div class="panel-actions">
             <button class="button button--small" @click="openAddMaterial()">新增素材</button>
+            <button class="button button--small button--plain button--danger" :disabled="!knowledgeList.length || clearingMaterials" @click="clearAllMaterials">清空</button>
           </div>
         </div>
 
@@ -1181,7 +1182,7 @@ import { useLinkageStore } from '@/stores/linkage'
 import { usePositiveMomentStore } from '@/stores/positiveMoment'
 import { useJobViewStore } from '@/stores/jobView'
 import {
-  listKnowledge, deleteKnowledge, splitKnowledge, importResume, batchSaveKnowledge, saveBasicInfo, updateKnowledge,
+  listKnowledge, deleteKnowledge, clearKnowledge, splitKnowledge, importResume, batchSaveKnowledge, saveBasicInfo, updateKnowledge,
   addKnowledgeItem, generateMaterial,
   listJobs, addJob, deleteJobs, previewJob, previewJobByUrl, importJob, getLatestAnalysis, verifyMatch, analyzeAsync, getAnalyzeTask, generateResume, exportResumeDocx, ocrJob, recognizeApplyChannel, patchApplyChannel, resolveApplyDetailLink, createApplyDraft
 } from '@/api/jobmatch'
@@ -1204,6 +1205,7 @@ const elfIntro = ref(false)
 let elfIntroTimer = null
 
 const knowledgeList = ref([])
+const clearingMaterials = ref(false)
 // 素材版本：内容变化后让求职助手的评估/定制简历/求职信缓存失效
 const materialsVersion = computed(() =>
   (knowledgeList.value || []).map((item) => `${item.id}:${item.content || ''}`).join('|')
@@ -2476,6 +2478,23 @@ async function removeMaterial(item) {
   // 同步清除该素材对应的「已补齐」映射，让对应待补足项随素材删除而重新出现
   closedGaps.value = Object.fromEntries(Object.entries(closedGaps.value).filter(([, matId]) => matId !== item.id))
   ElMessage.success('已删除，岗位匹配度已重新计算')
+}
+
+async function clearAllMaterials() {
+  try {
+    await ElMessageBox.confirm('确定清空全部简历素材吗？此操作不可恢复，清空后所有岗位的匹配度都会归零。', '清空素材', { type: 'warning' })
+  } catch (e) {
+    return
+  }
+  clearingMaterials.value = true
+  try {
+    await clearKnowledge()
+    knowledgeList.value = []
+    closedGaps.value = {}
+    ElMessage.success('已清空全部素材，岗位匹配度已重新计算')
+  } finally {
+    clearingMaterials.value = false
+  }
 }
 
 function focusMaterial(id) {

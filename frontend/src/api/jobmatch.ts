@@ -45,6 +45,10 @@ export function deleteKnowledge(id) {
   return request.delete(`/jobmatch/knowledge/${id}`)
 }
 
+export function clearKnowledge() {
+  return request.delete('/jobmatch/knowledge')
+}
+
 // ===== 我的目标岗位 =====
 export function listJobs() {
   return request.get('/jobmatch/jobs')

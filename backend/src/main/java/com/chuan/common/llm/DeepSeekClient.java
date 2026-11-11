@@ -3,6 +3,7 @@ package com.chuan.common.llm;
 import com.chuan.common.ai.AiSafetyGuard;
 import com.chuan.common.exception.BusinessException;
 import com.chuan.common.util.LlmText;
+import com.chuan.common.util.PromptLoader;
 import com.chuan.module.match.vo.MatchResultVO;
 import com.chuan.module.resume.dto.CareerAnalysisVO;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -35,71 +36,16 @@ import java.util.function.Consumer;
 @RequiredArgsConstructor
 public class DeepSeekClient {
 
-    private static final String SYSTEM_PROMPT = """
-            你是一名资深 HR 与技术面试官，负责对候选人简历与岗位 JD 进行匹配分析。
-            请严格按照 JSON 格式输出，不要输出 JSON 以外的任何内容，不要使用 Markdown 代码块。
-            输出 JSON 结构如下：
-            {
-              "overallScore": 0-100 的数字(保留一位小数),
-              "jobTitle": "从 JD 中提取的岗位名称",
-              "summary": "总体匹配评价，2-3 句话",
-              "dimensions": [
-                {"name": "技能维度名称", "score": 0-100 的数字, "remark": "简短评述"}
-              ],
-              "matchedPoints": ["简历中与 JD 匹配的关键词/技能/经验，使用原文短语"],
-              "missingRequirements": ["JD 中要求但简历缺失或不匹配的要求，使用原文短语"]
-            }
-            要求：
-            1. dimensions 覆盖该岗位最核心的 5-7 个能力维度（如技术栈、工作经验、学历、项目经验、软技能等，按 JD 实际内容确定）。
-            2. matchedPoints 与 missingRequirements 尽量使用简历和 JD 中的原文短语，便于前端精确定位高亮。
-            """;
+    private static final String SYSTEM_PROMPT = PromptLoader.get("deepseek-match-analyze");
 
-    private static final String POLISH_PROMPT =
-            "你是一名资深的简历优化专家，负责对用户提供的简历内容进行润色优化。\n" +
-            "请在保留原意和真实信息的前提下：优化语言表达、补充专业术语、突出亮点与成果、使描述更简洁专业。\n" +
-            "严格按 JSON 格式输出，不要输出 JSON 以外的内容，不要使用 Markdown 代码块。输出结构如下：\n" +
-            "{\"polished\": \"润色后的完整文本\"}\n" +
-            "注意：不要编造不存在的经历、数据或技能；如果原文信息缺失，保持留白或通用表达。";
+    private static final String POLISH_PROMPT = PromptLoader.get("deepseek-resume-polish");
 
-    private static final String COVER_LETTER_PROMPT =
-            "你是一名资深求职指导专家，负责为候选人撰写一封针对具体岗位的中文求职信。\n"
-            + "务必实事求是：基于候选人真实简历，突出与岗位要求匹配的关键优势，绝不编造经历、数据或技能。\n"
-            + "严格按 JSON 格式输出，不要输出 JSON 以外的内容，不要使用 Markdown 代码块。输出结构如下：\n"
-            + "{\n"
-            + "  \"subject\": \"应聘 {岗位名称} 求职信\",\n"
-            + "  \"greeting\": \"尊敬的招聘负责人：\",\n"
-            + "  \"body\": \"求职信正文，分段，每段用换行分隔，约 200-350 字\"\n"
-            + "}\n"
-            + "要求：\n"
-            + "1. body 应包含：开篇表明应聘岗位与来源、核心匹配优势（2-3 点，紧扣 JD）、表达加入意愿与感谢。\n"
-            + "2. 语言专业、诚恳、精炼，避免空话套话。\n"
-            + "3. 只使用与岗位要求直接相关的经历、技能和成果；与岗位无关的项目、课程、兴趣、证书不要罗列。";
+    private static final String COVER_LETTER_PROMPT = PromptLoader.get("deepseek-cover-letter");
 
     /** 流式版本只需要纯文本正文，不回 JSON，前端才能逐字渲染 */
-    private static final String COVER_LETTER_STREAM_PROMPT =
-            "你是一名资深求职指导专家，负责为候选人撰写一封针对具体岗位的中文求职信。\n"
-            + "务必实事求是：基于候选人真实简历，突出与岗位要求匹配的关键优势，绝不编造经历、数据或技能。\n"
-            + "直接输出求职信正文：不要输出 JSON、标题、称呼、落款或任何解释性文字，也不要使用 Markdown 标记。\n"
-            + "要求：\n"
-            + "1. 正文分段，每段之间用换行分隔，全文约 200-350 字。\n"
-            + "2. 包含：开篇表明应聘岗位、核心匹配优势（2-3 点，紧扣 JD）、表达加入意愿与感谢。\n"
-            + "3. 语言专业、诚恳、精炼，避免空话套话。\n"
-            + "4. 只使用与岗位要求直接相关的经历、技能和成果。";
+    private static final String COVER_LETTER_STREAM_PROMPT = PromptLoader.get("deepseek-cover-letter-stream");
 
-    private static final String CAREER_PROMPT =
-            "你是一名资深职业规划师与招聘专家，负责评估候选人简历与其目标岗位的匹配度，并给出可执行的发展建议。\n" +
-            "严格按 JSON 格式输出，不要输出 JSON 以外的内容，不要使用 Markdown 代码块。输出结构如下：\n" +
-            "{\n" +
-            "  \"fitScore\": 0-100 的整数,\n" +
-            "  \"overview\": \"总体评价，2-3 句话\",\n" +
-            "  \"recommendations\": [\n" +
-            "    {\"priority\": 1, \"category\": \"技能提升|经验积累|资质提升\", \"title\": \"简短标题\", \"detail\": \"具体可执行的建议\"}\n" +
-            "  ]\n" +
-            "}\n" +
-            "要求：\n" +
-            "1. recommendations 按优先级从高到低排列（priority 从 1 开始递增），共 3-6 条。\n" +
-            "2. category 只能取 \"技能提升\"、\"经验积累\"、\"资质提升\" 三个值之一。\n" +
-            "3. 建议要具体、可执行，紧扣候选人现状与目标岗位的真实要求差距，不要编造候选人未具备的经历。";
+    private static final String CAREER_PROMPT = PromptLoader.get("deepseek-career-advice");
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;

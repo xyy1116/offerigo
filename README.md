@@ -38,6 +38,9 @@ OfferiGo 用**一份可复用的简历素材库**作为唯一事实来源，让 
 | Paraformer `realtime-v2` | 面试实时语音转写 | 中英混合识别，支持热词与语义标点，端到端延迟低 |
 | `text-embedding-v3` | 素材与岗位的向量化 | 中文语义表达好，批量接口便宜 |
 
+全部提示词模板集中在 `backend/src/main/resources/prompts/*.md`，由 `PromptLoader` 按名加载并缓存，
+改提示词不需要改 Java 代码，评审可直接对照模板核查每个 AI 环节的约束。
+
 ### 2. 双轨评分体系
 
 本地确定性评分引擎（规则 + 语义覆盖）给出稳定、可解释的基础分；大模型评估提供深度分析。两者分层使用，避免同一份材料反复评估结果漂移。
@@ -124,7 +127,7 @@ chuan/
 │   ├── src/main/java/com/chuan/
 │   │   ├── common/              配置、鉴权、限流、LLM 客户端、AI 护栏、工具类
 │   │   └── module/              业务模块（jobmatch / interview / exam / ...）
-│   ├── src/main/resources/      配置、题库 JSON、字体
+│   ├── src/main/resources/      配置、Prompt 模板、题库 JSON、字体
 │   └── src/test/java/           单元测试
 ├── frontend/                    Vue 3 前端
 │   └── src/{views,components,api,stores,router,styles,utils}
