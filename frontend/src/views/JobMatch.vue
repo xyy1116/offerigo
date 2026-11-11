@@ -144,6 +144,13 @@
           </div>
           <div class="analyze-banner-track"><span class="analyze-banner-fill" :style="{ width: analyzePercent + '%' }"></span></div>
         </div>
+        <div v-if="recommendStale" class="analyze-banner" role="status" aria-live="polite">
+          <div class="analyze-banner-head">
+            <span class="spin"></span>
+            <span class="analyze-banner-text">今日岗位更新中，正在拉取最新岗位</span>
+            <span class="analyze-banner-meta">当前展示 {{ recommendVersion.date }} 的数据</span>
+          </div>
+        </div>
         <div v-if="displayedJobs.length" :key="jobActiveCat" class="job-list">
           <div
             v-for="(job, jobIndex) in displayedJobs"
@@ -2427,6 +2434,28 @@ function openAssistantFromElf(job) {
 
 // —— 今日岗位推荐：每天 8 点版本变化后自动刷新 TOP10 ——
 const recommendVersion = ref(null)
+
+/** 今日岗位是否还没爬到：此时页面展示的是历史数据，需要轮询等待后台补爬完成 */
+const localDateText = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+const recommendStale = computed(
+  () => !!recommendVersion.value?.date && recommendVersion.value.date !== localDateText()
+)
+let recommendPollTimer = null
+let recommendPollCount = 0
+
+function scheduleRecommendPoll() {
+  // 最多轮询 12 次（约 1 分钟），避免后台爬取失败时无限请求
+  if (recommendPollTimer || recommendPollCount >= 12) return
+  recommendPollTimer = setTimeout(async () => {
+    recommendPollTimer = null
+    recommendPollCount += 1
+    await loadRecommendVersion()
+    if (recommendStale.value) scheduleRecommendPoll()
+  }, 5000)
+}
 let recommendVersionTimer = null
 
 async function loadRecommendVersion() {
@@ -2444,6 +2473,16 @@ async function loadRecommendVersion() {
     // 版本变化或本地还没拿到推荐列表时，同步拉取当天 TOP10
     if (version !== previousVersion || !recommendJobs.value.length) {
       loadTodayRecommendJobs()
+    }
+    // 今日岗位还没就绪：轮询等待后台补爬，就绪后版本变化会自动触发刷新
+    if (recommendStale.value) {
+      scheduleRecommendPoll()
+    } else {
+      recommendPollCount = 0
+      if (recommendPollTimer) {
+        clearTimeout(recommendPollTimer)
+        recommendPollTimer = null
+      }
     }
   } catch (e) {
     // 版本检查失败不打扰用户
@@ -2741,6 +2780,8 @@ onUnmounted(() => {
   window.removeEventListener('focus', loadRecommendVersion)
   clearInterval(recommendVersionTimer)
   recommendVersionTimer = null
+  if (recommendPollTimer) clearTimeout(recommendPollTimer)
+  recommendPollTimer = null
   if (elfIntroTimer) clearTimeout(elfIntroTimer)
   elfIntroTimer = null
   stopAnalyzeClock()
