@@ -150,7 +150,7 @@
           <span>你的简历素材还是空的，下面的匹配度会一直是 0</span>
           <button class="button button--small button--plain" @click="openSidebarFocus('free')">去补充素材</button>
         </div>
-        <div v-if="recommendStale" class="analyze-banner" role="status" aria-live="polite">
+        <div v-if="recommendStale && jobActiveCat === 'recommend'" class="analyze-banner" role="status" aria-live="polite">
           <div class="analyze-banner-head">
             <span class="spin"></span>
             <span class="analyze-banner-text">今日岗位更新中，正在拉取最新岗位</span>
@@ -2498,14 +2498,11 @@ function openAssistantFromElf(job) {
 // —— 今日岗位推荐：每天 8 点版本变化后自动刷新 TOP10 ——
 const recommendVersion = ref(null)
 
-/** 今日岗位是否还没爬到：此时页面展示的是历史数据，需要轮询等待后台补爬完成 */
-const localDateText = () => {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-const recommendStale = computed(
-  () => !!recommendVersion.value?.date && recommendVersion.value.date !== localDateText()
-)
+/**
+ * 今日岗位是否还没爬到：以服务端的 pending 为准。
+ * 服务端只在「已过今天 8 点且数据仍是旧的」时才置 true，8 点前展示昨日数据属于正常状态。
+ */
+const recommendStale = computed(() => !!recommendVersion.value?.pending)
 let recommendPollTimer = null
 let recommendPollCount = 0
 
@@ -2529,7 +2526,7 @@ async function loadRecommendVersion() {
     const previousVersion = recommendVersion.value?.version || 0
     // 切换前是否还在展示历史数据：用于判断这次刷新是不是「今日岗位刚更新完成」
     const wasStale = recommendStale.value
-    recommendVersion.value = { date: data.date || '', version, count }
+    recommendVersion.value = { date: data.date || '', version, count, pending: !!data.pending }
     if (!version || !count) {
       recommendJobs.value = []
       return

@@ -238,6 +238,9 @@ public class JobRecommendService {
         vo.setCount(Math.min(RECOMMEND_SIZE, jobs.size()));
         vo.setVersion(jobs.isEmpty() ? 0L : date.toEpochDay());
         vo.setRunVersion(RUN_VERSION);
+        // 只有「已过今天 8 点」且数据还是旧的，才算等待更新；8 点前展示昨天数据是正常状态
+        vo.setPending(jobs.isEmpty()
+                || (date.isBefore(LocalDate.now()) && jobCrawlTask.isPastTodayCrawlTime()));
         return vo;
     }
 

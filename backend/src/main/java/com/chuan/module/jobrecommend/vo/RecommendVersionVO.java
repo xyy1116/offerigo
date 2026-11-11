@@ -16,4 +16,7 @@ public class RecommendVersionVO implements Serializable {
 
     /** 后端本次启动的标识；前端用于演示“每次启动项目亮一次 NEW”。 */
     private String runVersion;
+
+    /** 今天已过 8 点但还没拿到今日数据（正在补爬），前端据此显示「今日岗位更新中」 */
+    private Boolean pending;
 }
