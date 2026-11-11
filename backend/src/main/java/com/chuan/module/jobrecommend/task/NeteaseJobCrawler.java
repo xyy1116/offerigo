@@ -25,7 +25,8 @@ import java.util.Set;
 public class NeteaseJobCrawler {
 
     private static final String API = "https://hr.163.com/api/hr163/position/queryPage";
-    private static final String DETAIL = "https://hr.163.com/position/detail.html?id=";
+    /** 详情页路由未公开（深链会落到前端 404），统一跳到带关键词的岗位列表页 */
+    private static final String SEARCH_PAGE = "https://hr.163.com/position/list.html?keyword=";
     private static final String USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
@@ -77,7 +78,7 @@ public class NeteaseJobCrawler {
                 candidate.setLocation(cut(location, 250));
                 candidate.setSalary("面议");
                 candidate.setRequirement(cut(requirement, 6000));
-                candidate.setSourceUrl(DETAIL + id);
+                candidate.setSourceUrl(SEARCH_PAGE + enc(title));
                 candidate.setEmbedText(cut(title + "\n网易\n" + location + "\n" + requirement, 4000));
                 out.add(candidate);
             }
@@ -106,5 +107,13 @@ public class NeteaseJobCrawler {
         }
         String text = value.trim();
         return text.length() <= max ? text : text.substring(0, max);
+    }
+
+    private String enc(String value) {
+        try {
+            return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.name());
+        } catch (Exception e) {
+            return value;
+        }
     }
 }
