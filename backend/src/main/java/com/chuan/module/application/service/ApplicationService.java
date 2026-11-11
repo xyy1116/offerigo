@@ -139,7 +139,12 @@ public class ApplicationService {
     /** 流式生成求职信：delta 事件逐个推正文片段，done 事件推完整结构与引用素材。 */
     public SseEmitter streamCoverLetter(Long userId, Long jobId) {
         SseEmitter emitter = new SseEmitter(180_000L);
-        emitter.onTimeout(emitter::complete);
+        // 超时必须显式告诉前端失败：只 complete() 会让前端把半截正文当成生成成功
+        emitter.onTimeout(() -> {
+            sendEvent(emitter, "error", writeJson("生成超时，请稍后重试"));
+            emitter.complete();
+        });
+        emitter.onError(e -> log.warn("求职信流式连接异常: {}", e.getMessage()));
         streamExecutor.submit(() -> {
             progressStore.start(userId, GenerationProgressStore.TYPE_COVER, jobId);
             try {
@@ -172,8 +177,8 @@ public class ApplicationService {
     private void sendEvent(SseEmitter emitter, String name, String data) {
         try {
             emitter.send(SseEmitter.event().name(name).data(data));
-        } catch (IOException e) {
-            // 客户端已断开，忽略
+        } catch (Exception e) {
+            // 客户端已断开或 emitter 已完成，忽略即可
         }
     }
 

@@ -159,17 +159,29 @@ public class JobApplicationService {
     /** 修改状态/备注（草稿也可用于「暂不记录」以外的修正，但正常只操作正式记录）。 */
     public JobApplicationVO update(Long userId, Long id, UpdateApplicationRequest req) {
         JobApplication record = require(userId, id);
+        LambdaUpdateWrapper<JobApplication> update = new LambdaUpdateWrapper<JobApplication>()
+                .eq(JobApplication::getId, id)
+                .eq(JobApplication::getUserId, userId);
+        boolean changed = false;
         if (req != null && StringUtils.hasText(req.getStatus())) {
             String status = req.getStatus().trim();
             if (!STATUSES.contains(status)) {
                 throw new BusinessException("不支持的投递状态");
             }
             record.setStatus(status);
+            update.set(JobApplication::getStatus, status);
+            changed = true;
         }
         if (req != null && req.getRemark() != null) {
-            record.setRemark(StringUtils.hasText(req.getRemark()) ? req.getRemark().trim() : null);
+            // 备注清空也要落库：updateById 的默认策略会跳过 null，必须显式 set
+            String remark = StringUtils.hasText(req.getRemark()) ? req.getRemark().trim() : null;
+            record.setRemark(remark);
+            update.set(JobApplication::getRemark, remark);
+            changed = true;
         }
-        applicationMapper.updateById(record);
+        if (changed) {
+            applicationMapper.update(null, update);
+        }
         return toVO(record, followUpDays(userId));
     }
 

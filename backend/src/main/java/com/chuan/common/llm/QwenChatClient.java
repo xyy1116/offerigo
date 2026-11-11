@@ -257,7 +257,7 @@ public class QwenChatClient {
                         + "   - 不遗漏信息，也不杜撰。\n"
                         + "严格剥离临时状态标注：凡是涉及「备考中/在读/学习中/计划中/准备中/意向/进行中/尚未获取/即将参加」等临时状态或过程性描述，一律从 content 中移除，只保留已经具备的事实性能力/资质/经历（如「CISSP认证（备考中）」→「CISSP认证」，「正在学习 Kubernetes」→「Kubernetes」）；严禁在任何 content 结尾或括号内追加这类状态标注。"));
         messages.add(Map.of("role", "user", "content",
-                "【待拆分素材】\n" + content
+                "【待拆分素材】\n" + AiSafetyGuard.wrapUntrusted(content)
                         + "\n\n【已有记录】\n" + (existingDesc.length() > 0 ? existingDesc.toString() : "（暂无）")
                         + "\n请拆分素材并检测疑似重复。"));
         return doChat(messages, true, 0.1);

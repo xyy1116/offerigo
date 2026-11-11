@@ -282,6 +282,23 @@ public class InterviewOrchestrator {
         }
     }
 
+    /**
+     * 用户主动结束面试：废弃在途生成并删除续接快照，
+     * 否则已结束的面试会在下次进入时以「继续未完成的面试」再次出现。
+     */
+    private void handleCancel(InterviewSession s) {
+        s.setPhase(InterviewSession.PHASE_DONE);
+        s.setGeneration(s.getGeneration() + 1);
+        Long recordId = s.getRecordId();
+        if (recordId != null) {
+            try {
+                interviewService.deleteRecord(recordId, s.getUserId());
+            } catch (Exception e) {
+                log.warn("删除已取消的面试快照失败: {}", e.getMessage());
+            }
+        }
+    }
+
     // ==================== 消息处理 ====================
 
     public void onText(WebSocketSession browserSession, String payload) {
@@ -297,6 +314,7 @@ public class InterviewOrchestrator {
                 case "resume" -> handleResume(s, node);
                 case "finish" -> doFinish(s);
                 case "user_text" -> handleUserUtterance(s, node.path("text").asText(""));
+                case "cancel" -> handleCancel(s);
                 case "interrupt" -> handleInterrupt(s);
                 case "no_answer" -> handleNoAnswer(s);
                 case "mic_start" -> handleMicStart(s);

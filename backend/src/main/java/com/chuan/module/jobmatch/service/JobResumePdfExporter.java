@@ -92,7 +92,7 @@ public class JobResumePdfExporter {
         appendIdentity(sb, r);
         sb.append("</td>");
         if (photo != null) {
-            sb.append("<td class='head-photo'><img class='photo' src='").append(photo).append("'/></td>");
+            sb.append("<td class='head-photo'><img class='photo' src='").append(esc(photo)).append("'/></td>");
         }
         sb.append("</tr></table>");
     }
@@ -102,7 +102,7 @@ public class JobResumePdfExporter {
         appendIdentity(sb, r);
         sb.append("</td>");
         if (photo != null) {
-            sb.append("<td class='head-photo'><img class='photo' src='").append(photo).append("'/></td>");
+            sb.append("<td class='head-photo'><img class='photo' src='").append(esc(photo)).append("'/></td>");
         }
         sb.append("</tr></table></div>");
     }
@@ -110,7 +110,7 @@ public class JobResumePdfExporter {
     private void appendSidebar(StringBuilder sb, JobResumeVO r, String photo) {
         sb.append("<table class='sidebar'><tr><td class='side'>");
         if (photo != null) {
-            sb.append("<p><img class='photo' src='").append(photo).append("'/></p>");
+            sb.append("<p><img class='photo' src='").append(esc(photo)).append("'/></p>");
         }
         appendIdentity(sb, r);
         appendSkills(sb, r);
@@ -202,9 +202,22 @@ public class JobResumePdfExporter {
     }
 
     private boolean safePhoto(String photo) {
-        return StringUtils.hasText(photo)
-                && (photo.startsWith("data:image/jpeg") || photo.startsWith("data:image/jpg") || photo.startsWith("data:image/png"))
-                && photo.indexOf(',') > 0;
+        if (!StringUtils.hasText(photo)) {
+            return false;
+        }
+        String value = photo.trim();
+        int comma = value.indexOf(',');
+        // 只接受内联 base64 图片，避免渲染器按 URL 去拉取外部或本机资源
+        if (comma <= 0 || !value.substring(0, comma).endsWith(";base64")) {
+            return false;
+        }
+        String head = value.substring(0, comma);
+        if (!head.startsWith("data:image/jpeg") && !head.startsWith("data:image/jpg")
+                && !head.startsWith("data:image/png")) {
+            return false;
+        }
+        String payload = value.substring(comma + 1);
+        return payload.length() <= 3_000_000 && payload.matches("[A-Za-z0-9+/=\\s]+");
     }
 
     private String textOr(String value, String fallback) {

@@ -256,10 +256,13 @@ public class JobRecommendService {
                 .orderByDesc(CrawlJob::getId));
     }
 
-    /** 8 点定时爬取与页面请求重合时，等定时任务写入岗位，避免推荐页短暂空态。 */
+    /**
+     * 8 点定时爬取与页面请求重合时，最多等 3 秒，避免请求线程被长时间占住；
+     * 等不到就走前端轮询（页面会显示「今日岗位更新中」）。
+     */
     private List<CrawlJob> awaitLatestJobs(List<CrawlJob> initial) {
         List<CrawlJob> jobs = initial;
-        for (int i = 0; i < 60 && jobs.size() < RECOMMEND_SIZE && jobCrawlTask.isCrawling(); i++) {
+        for (int i = 0; i < 3 && jobs.size() < RECOMMEND_SIZE && jobCrawlTask.isCrawling(); i++) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {

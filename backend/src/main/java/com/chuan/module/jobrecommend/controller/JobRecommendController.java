@@ -61,7 +61,7 @@ public class JobRecommendController {
     @PostMapping("/crawl/trigger")
     public Result<String> triggerCrawl(HttpServletRequest request) {
         currentUserId(request);
-        jobCrawlTask.triggerAsync();
+        jobCrawlTask.triggerAsync(true);
         return Result.success("爬取任务已启动，请等待 15-30 秒后刷新页面");
     }
 

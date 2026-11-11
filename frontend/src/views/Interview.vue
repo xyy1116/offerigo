@@ -798,7 +798,8 @@ function submitText() {
 }
 
 function endInterview() {
-  // 结束本次面试：停止语音/识别、清理会话并返回职业选择页（不生成评估报告）
+  // 结束本次面试：通知后端丢弃续接快照，再清理本地会话
+  send({ type: 'cancel' })
   ElMessage.info('已结束本次面试')
   reset()
 }

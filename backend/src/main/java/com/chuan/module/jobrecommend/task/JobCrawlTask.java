@@ -66,6 +66,13 @@ public class JobCrawlTask {
     /** 定时任务与按需爬取可能同时触发，串行化避免重复入库。 */
     private final ReentrantLock crawlLock = new ReentrantLock();
 
+    /** 最近一次爬取尝试时间：避免来源失效时每次开页面都重跑一遍 */
+    private final java.util.concurrent.atomic.AtomicLong lastAttemptAt =
+            new java.util.concurrent.atomic.AtomicLong(0);
+
+    /** 自动触发的冷却时间 */
+    private static final long RETRIGGER_INTERVAL_MS = 30 * 60 * 1000L;
+
     @Value("${job-crawl.max-candidates:30}")
     private int maxCandidates;
 
@@ -81,6 +88,9 @@ public class JobCrawlTask {
             keywords = DEFAULT_KEYWORDS;
         }
         int saved = crawlByKeywords(keywords, maxCandidates);
+        if (saved == 0) {
+            log.warn("本次爬取未获得任何岗位，请检查三个来源的接口是否仍可用");
+        }
         log.info("每日岗位爬取完成，新增 {} 条，关键词={}", saved, keywords);
     }
 
@@ -112,10 +122,25 @@ public class JobCrawlTask {
 
     /** 手动触发异步爬取（后台线程执行），爬取中再次触发自动跳过。 */
     public void triggerAsync() {
+        triggerAsync(false);
+    }
+
+    /**
+     * @param force true 表示人工手动触发，忽略冷却时间；
+     *              页面打开时的兜底触发走 false，避免爬取失败后每次访问都重跑一遍
+     */
+    public void triggerAsync(boolean force) {
         if (crawlLock.isLocked()) {
             log.info("爬取任务已在执行中，跳过");
             return;
         }
+        long now = System.currentTimeMillis();
+        long last = lastAttemptAt.get();
+        if (!force && now - last < RETRIGGER_INTERVAL_MS) {
+            log.info("距上次爬取不足 {} 分钟，跳过重复触发", RETRIGGER_INTERVAL_MS / 60000);
+            return;
+        }
+        lastAttemptAt.compareAndSet(last, now);
         new Thread(this::crawlDaily).start();
     }
 

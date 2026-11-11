@@ -42,35 +42,51 @@ export async function streamCoverLetter(
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
+  let finished = false
   for (;;) {
     const { done, value } = await reader.read()
     if (done) break
     buffer += decoder.decode(value, { stream: true })
     let index = buffer.indexOf('\n\n')
     while (index >= 0) {
-      handleSseFrame(buffer.slice(0, index), handlers)
+      if (handleSseFrame(buffer.slice(0, index), handlers)) finished = true
       buffer = buffer.slice(index + 2)
       index = buffer.indexOf('\n\n')
     }
   }
+  // 连接被静默关闭（超时/服务重启）时不会有 done 事件，不能把半截正文当成成功
+  if (!finished) {
+    handlers.onError('生成中断，请重试')
+  }
 }
 
-function handleSseFrame(frame: string, handlers: CoverLetterStreamHandlers): void {
+/** 处理一个 SSE 帧；返回 true 表示收到了终止事件（done / error） */
+function handleSseFrame(frame: string, handlers: CoverLetterStreamHandlers): boolean {
   let event = 'message'
   const dataLines: string[] = []
   for (const line of frame.split('\n')) {
     if (line.startsWith('event:')) event = line.slice(6).trim()
     else if (line.startsWith('data:')) dataLines.push(line.slice(5).trim())
   }
-  if (!dataLines.length) return
+  if (!dataLines.length) return false
   try {
     const payload = JSON.parse(dataLines.join('\n'))
-    if (event === 'delta') handlers.onDelta(String(payload))
-    else if (event === 'done') handlers.onDone(payload)
-    else if (event === 'error') handlers.onError(String(payload))
+    if (event === 'delta') {
+      handlers.onDelta(String(payload))
+      return false
+    }
+    if (event === 'done') {
+      handlers.onDone(payload)
+      return true
+    }
+    if (event === 'error') {
+      handlers.onError(String(payload))
+      return true
+    }
   } catch {
     // 无法解析的帧直接忽略，不影响后续流
   }
+  return false
 }
 
 // 生成任务真实阶段（准备素材 / AI 生成 / 整理结果）

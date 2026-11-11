@@ -907,6 +907,8 @@ public class JobMatchServiceImpl implements JobMatchService {
                 .eq(JobRecommendation::getTargetJobId, id)
                 .set(JobRecommendation::getAdded, 0)
                 .set(JobRecommendation::getTargetJobId, null));
+        // 单删也要清掉推荐↔岗位映射，否则该岗位会被永久判为「已加入」而无法再加回
+        removeRecommendationMappings(userId, java.util.List.of(job));
         clearCache(userId);
     }
 
