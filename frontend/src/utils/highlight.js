@@ -4,6 +4,15 @@
  */
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+/** 很短的英文词（RL、Go、K8s）必须独立成词，否则会命中 URL、Google 这类无关文本 */
+function toPattern(word) {
+  const escaped = escapeRegExp(word)
+  if (/^[A-Za-z0-9+#.]+$/.test(word) && word.length <= 3) {
+    return `(?<![A-Za-z0-9])${escaped}(?![A-Za-z0-9])`
+  }
+  return escaped
+}
+
 export function highlightSegments(text, keywords) {
   const source = String(text || '')
   const words = [...new Set((keywords || []).map((word) => String(word || '').trim()).filter(Boolean))]
@@ -15,7 +24,7 @@ export function highlightSegments(text, keywords) {
 
   let regexp
   try {
-    regexp = new RegExp(words.map(escapeRegExp).join('|'), 'gi')
+    regexp = new RegExp(words.map(toPattern).join('|'), 'gi')
   } catch (e) {
     return [{ text: source, hit: false }]
   }

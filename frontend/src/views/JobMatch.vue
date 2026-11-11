@@ -2118,8 +2118,15 @@ function matchMissCount(job) { return matchMisses(job).length }
 const SKILL_TERMS = [
   'Python', 'PyTorch', 'TensorFlow', 'RAG', 'Agent', 'LLM', '大模型', 'Transformer',
   '机器学习', '深度学习', 'NLP', '多模态', 'Java', 'Spring', 'Vue', 'React',
-  'MySQL', 'Redis', 'Docker', 'Kubernetes', 'SQL', '数据分析', 'Prompt'
+  'MySQL', 'Redis', 'Docker', 'Kubernetes', 'SQL', '数据分析', 'Prompt',
+  // 常见缩写与方向词：岗位要求里很常见，但 AI 抽取的技术栈往往漏掉
+  'RL', 'SFT', 'DPO', 'PPO', 'LoRA', 'K8s', 'Operator', 'CRD', 'SRE',
+  'DevOps', 'Golang', 'Go', 'Linux', 'Shell', 'Kafka', 'ETL', 'CI/CD',
+  '云原生', '可观测性', '微服务', '分布式', '高并发', '容器', '数据仓库', '推荐系统'
 ]
+
+/** 这些是章节标签或整句，不是技能词，不该被高亮 */
+const HIGHLIGHT_LABELS = new Set(['职位要求', '岗位要求', '岗位职责', '工作内容', '任职要求', '加分项', '补充信息'])
 
 function matchDetailRows(job) {
   const rows = job && job.match && job.match.details
@@ -2191,22 +2198,21 @@ function matchOverviewSub(job) {
 
 function highlightSkill(text, job) {
   const words = new Set()
+  const accept = (value) => {
+    // 超过 12 字的多半是整句要求，高亮整句没有意义
+    if (!value || value.length > 12 || HIGHLIGHT_LABELS.has(value)) return
+    words.add(value)
+  }
   const match = job && job.match
   if (match) {
     for (const list of [match.techStack, match.coreRequirements]) {
       if (Array.isArray(list)) {
-        list.forEach((word) => {
-          const value = String(word || '').trim()
-          if (value) words.add(value)
-        })
+        list.forEach((word) => accept(String(word || '').trim()))
       }
     }
   }
   if (job && typeof job.techStack === 'string') {
-    job.techStack.split(/[、,，;；/|]+/).forEach((word) => {
-      const value = word.trim()
-      if (value) words.add(value)
-    })
+    job.techStack.split(/[、,，;；/|]+/).forEach((word) => accept(word.trim()))
   }
   SKILL_TERMS.forEach((word) => words.add(word))
   return highlightSegments(text, [...words])
