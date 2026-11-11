@@ -8,6 +8,7 @@ import com.chuan.common.progress.GenerationProgressStore;
 import com.chuan.module.application.vo.AtsCheckVO;
 import com.chuan.module.application.vo.CoverLetterVO;
 import com.chuan.module.application.vo.GenerationProgressVO;
+import com.chuan.module.application.vo.MaterialRefVO;
 import com.chuan.module.jobmatch.entity.KnowledgeEntry;
 import com.chuan.module.jobmatch.entity.TargetJob;
 import com.chuan.module.jobmatch.mapper.KnowledgeEntryMapper;
@@ -103,7 +104,8 @@ public class ApplicationService {
         progressStore.start(userId, GenerationProgressStore.TYPE_COVER, jobId);
         try {
             TargetJob job = loadJob(userId, jobId);
-            String knowledgeText = requireRelevantKnowledge(userId, job);
+            List<KnowledgeEntry> selected = selectRelevantEntries(userId, job);
+            String knowledgeText = toKnowledgeText(selected);
             progressStore.stage(userId, GenerationProgressStore.TYPE_COVER, jobId,
                     GenerationProgressStore.GENERATING);
             String json = deepSeekClient.writeCoverLetter(knowledgeText, job.getJobName(), job.getCompanyName(), job.getJobRequirement());
@@ -114,6 +116,8 @@ public class ApplicationService {
                 // 素材库无结构化姓名，落款由前端按需补充
                 vo.setApplicantName(null);
                 vo.setBody(indentCoverBody(vo.getBody()));
+                // 引用回溯：告诉用户这封信参考了哪些素材
+                vo.setMaterials(toMaterialRefs(selected));
                 return vo;
             } catch (Exception e) {
                 log.error("求职信解析失败：{}", e.getMessage());
@@ -308,8 +312,8 @@ public class ApplicationService {
         return sb.toString();
     }
 
-    /** 从我的简历素材组装文本（type：content 逐条拼装），与推荐/匹配链路一致。 */
-    private String requireRelevantKnowledge(Long userId, TargetJob job) {
+    /** 取与岗位最相关的素材：既作为模型输入，也用于前端引用回溯展示。 */
+    private List<KnowledgeEntry> selectRelevantEntries(Long userId, TargetJob job) {
         List<KnowledgeEntry> entries = knowledgeEntryMapper.selectList(
                 new LambdaQueryWrapper<KnowledgeEntry>()
                         .eq(KnowledgeEntry::getUserId, userId)
@@ -318,16 +322,33 @@ public class ApplicationService {
             throw new BusinessException("请先在「我的简历素材」中添加你的个人信息");
         }
         List<KnowledgeEntry> selected = jobMaterialSelector.select(entries, job);
+        if (selected.isEmpty()) {
+            throw new BusinessException("请先在「我的简历素材」中添加你的个人信息");
+        }
+        return selected;
+    }
+
+    /** 素材 → 模型输入文本（type：content 逐条拼装），与推荐/匹配链路一致。 */
+    private String toKnowledgeText(List<KnowledgeEntry> selected) {
         StringBuilder sb = new StringBuilder();
         for (KnowledgeEntry e : selected) {
             sb.append(hasText(e.getType()) ? e.getType() : "").append("：")
                     .append(e.getContent() == null ? "" : e.getContent()).append("\n");
         }
-        String text = sb.toString();
-        if (!hasText(text)) {
-            throw new BusinessException("请先在「我的简历素材」中添加你的个人信息");
+        return sb.toString();
+    }
+
+    /** 素材 → 引用列表，内容截断到 80 字避免响应过大。 */
+    private List<MaterialRefVO> toMaterialRefs(List<KnowledgeEntry> selected) {
+        List<MaterialRefVO> refs = new ArrayList<>();
+        for (KnowledgeEntry e : selected) {
+            MaterialRefVO ref = new MaterialRefVO();
+            ref.setType(e.getType());
+            String content = e.getContent() == null ? "" : e.getContent().trim();
+            ref.setContent(content.length() > 80 ? content.substring(0, 80) + "…" : content);
+            refs.add(ref);
         }
-        return text;
+        return refs;
     }
 
     private String requireKnowledge(Long userId) {

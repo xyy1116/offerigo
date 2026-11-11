@@ -171,6 +171,16 @@
               <div class="cover-body">{{ cover.body }}</div>
               <div v-if="cover.applicantName" class="cover-sign">{{ cover.applicantName }}</div>
             </div>
+            <!-- 引用回溯：这封信实际参考了哪些素材 -->
+            <details v-if="cover.materials && cover.materials.length" class="material-refs">
+              <summary>本次生成参考了 {{ cover.materials.length }} 条简历素材</summary>
+              <ul>
+                <li v-for="(m, i) in cover.materials" :key="i">
+                  <span class="material-refs__type">{{ m.type }}</span>
+                  <span class="material-refs__content">{{ m.content }}</span>
+                </li>
+              </ul>
+            </details>
             <div class="export-actions">
               <button
                 class="button"
@@ -1038,6 +1048,45 @@ function numScore(s) {
 }
 
 /* 求职信 */
+.material-refs {
+  margin: -4px 0 14px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  background: var(--color-surface-muted);
+}
+.material-refs summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+.material-refs ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.material-refs li {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-2);
+}
+.material-refs__type {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  font-size: 11px;
+  line-height: 18px;
+}
+.material-refs__content {
+  min-width: 0;
+}
 .cover-letter {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);

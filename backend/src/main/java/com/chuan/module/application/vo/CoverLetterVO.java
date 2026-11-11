@@ -3,6 +3,7 @@ package com.chuan.module.application.vo;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 针对目标岗位生成的中文求职信。
@@ -21,4 +22,7 @@ public class CoverLetterVO implements Serializable {
 
     /** 落款姓名（取自简历基本信息）。 */
     private String applicantName;
+
+    /** 本次生成实际引用的素材，供前端做引用回溯展示。 */
+    private List<MaterialRefVO> materials;
 }
