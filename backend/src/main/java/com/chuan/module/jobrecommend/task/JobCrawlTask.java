@@ -55,9 +55,9 @@ public class JobCrawlTask {
     private final CrawlJobMapper crawlJobMapper;
     private final UserResumeMapper userResumeMapper;
     private final EmbeddingClient embeddingClient;
-    private final ZhaopinJobCrawler zhaopinJobCrawler;
+    private final NeteaseJobCrawler neteaseJobCrawler;
     private final TencentJobCrawler tencentJobCrawler;
-    private final ByteDanceJobCrawler byteDanceJobCrawler;
+    private final MeituanJobCrawler meituanJobCrawler;
     private final ResumeSkillService resumeSkillService;
     private final ObjectMapper objectMapper;
     private final TargetJobMapper targetJobMapper;
@@ -166,9 +166,9 @@ public class JobCrawlTask {
             Set<String> seen = new HashSet<>(existing.keySet());
             int perSource = Math.max(4, limit / 3);
             List<CrawlCandidate> pending = new ArrayList<>();
-            pending.addAll(crawlSource("智联招聘", words, perSource, seen, existing, zhaopinJobCrawler::search));
             pending.addAll(crawlSource("腾讯招聘", words, perSource, seen, existing, tencentJobCrawler::search));
-            pending.addAll(crawlSource("字节跳动", words, perSource, seen, existing, byteDanceJobCrawler::search));
+            pending.addAll(crawlSource("美团招聘", words, perSource, seen, existing, meituanJobCrawler::search));
+            pending.addAll(crawlSource("网易招聘", words, perSource, seen, existing, neteaseJobCrawler::search));
             int saved = save(pending, today);
             repairShortTargets();
             repairShortCrawlJobs();
@@ -370,9 +370,7 @@ public class JobCrawlTask {
         for (TargetJob row : rows) {
             String url = row.getJobLink();
             try {
-                String text = url.contains("zhaopin.com")
-                        ? zhaopinJobCrawler.fetchRequirement(url)
-                        : requirementFromText(jobLinkCrawler.crawl(url).getText());
+                String text = requirementFromText(jobLinkCrawler.crawl(url).getText());
                 if (!StringUtils.hasText(text)) {
                     continue;
                 }
@@ -407,9 +405,7 @@ public class JobCrawlTask {
         for (CrawlJob row : rows) {
             String url = row.getSourceUrl();
             try {
-                String text = url.contains("zhaopin.com")
-                        ? zhaopinJobCrawler.fetchRequirement(url)
-                        : requirementFromText(jobLinkCrawler.crawl(url).getText());
+                String text = requirementFromText(jobLinkCrawler.crawl(url).getText());
                 if (!StringUtils.hasText(text)) {
                     continue;
                 }
