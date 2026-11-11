@@ -459,14 +459,10 @@ function splitStacks(text) {
   return String(text || '').split(/[,，、/|]+/).map((s) => s.trim()).filter(Boolean)
 }
 
-/** 与后端一致的兜底判断，保证页面永远明确显示含 / 不含编程题 */
+/** 与后端一致的兜底判断：只有岗位明确指出了我们支持的语言才出编程题 */
 function inferCodingRequired(titleText, stacks) {
-  const title = String(titleText || '').toLowerCase()
-  const stackText = (stacks || []).join(' ').toLowerCase()
-  const languageStack = /(java|python|golang|go语言|c\+\+|c#|javascript|typescript|vue|react|node|spring|django|flask|kotlin|swift|rust|php|scala|ruby|\.net)/
-  if (languageStack.test(stackText)) return true
-  const codingTitle = /(测试开发|自动化测试|开发|研发|程序员|前端|后端|服务端|全栈|算法|客户端|移动端|android|ios|嵌入式|大模型|机器学习|深度学习|ai应用|数据开发|大数据|数仓|数据仓库|平台|基础设施|sre|devops|安全研发|渗透|架构师|java|python|golang|go语言|c\+\+|c#|php|node|rust|kotlin|swift|javascript|typescript)/
-  return codingTitle.test(title)
+  const text = `${titleText || ''} ${(stacks || []).join(' ')}`.toLowerCase()
+  return /(java(?!script)|javascript|\bjs\b|vue|react|node|python|django|flask|c\+\+|cpp|c语言)/.test(text)
 }
 
 function jobOptionLabel(job) {

@@ -89,7 +89,8 @@ public class ExamController {
         List<String> stacks = StringUtils.hasText(techStack)
                 ? Arrays.stream(techStack.split("[,，、]")).map(String::trim).filter(StringUtils::hasText).toList()
                 : List.of();
-        boolean codingRequired = industrySupport.requiresCoding(jobTitle, stacks);
+        boolean codingRequired = industrySupport.requiresCoding(jobTitle, stacks)
+                && codeSandboxService.codingRunnable(jobTitle, String.join(" ", stacks));
         return Result.success(questionBankService.matchCount(jobTitle, stacks, knowledgePoint, difficulty,
                 userId, codingRequired, 2));
     }

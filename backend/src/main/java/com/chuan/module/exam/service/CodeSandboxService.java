@@ -83,23 +83,13 @@ public class CodeSandboxService {
         return "";
     }
 
-    /** 明确属于我们不支持运行的语言：只有这些岗位才不出编程题 */
-    private static final java.util.List<String> UNSUPPORTED_HINTS = java.util.List.of(
-            "golang", "go语言", "go 语言", "rust", "php", "c#", "csharp", "kotlin",
-            "swift", "scala", "ruby", "perl", "lua", "dart", "objective-c");
-
     /**
-     * 这个岗位能不能出编程题：命中支持的语言就能出；
-     * 判不出语言但也没提到冷门语言时，按能出处理（默认 Java/JavaScript 环境）。
+     * 这个岗位能不能出编程题：只认能明确判出、且我们有运行时的语言。
+     * 非语言类岗位、或语言不在支持范围内（Go/Rust/PHP 等），一律不出编程题。
      */
     public boolean codingRunnable(String jobTitle, String techStack) {
         String language = resolveLanguage(jobTitle, techStack);
-        if (!language.isEmpty()) {
-            return supports(language);
-        }
-        String text = ((jobTitle == null ? "" : jobTitle) + " " + (techStack == null ? "" : techStack))
-                .toLowerCase(Locale.ROOT);
-        return UNSUPPORTED_HINTS.stream().noneMatch(text::contains);
+        return !language.isEmpty() && supports(language);
     }
 
     /** 可运行语言清单（供前端下拉使用） */
