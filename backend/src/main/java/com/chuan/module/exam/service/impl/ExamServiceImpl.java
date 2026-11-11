@@ -310,7 +310,18 @@ public class ExamServiceImpl extends ServiceImpl<ExamPaperMapper, ExamPaper> imp
                 String userAnswer = answerItem == null || answerItem.getAnswer() == null ? "" : answerItem.getAnswer();
                 String language = answerItem == null ? null : answerItem.getLanguage();
                 BigDecimal fullScore = fullScoreOf(question.getType());
-                GradingItemVO item = gradeOne(question, userAnswer, language, fullScore);
+                GradingItemVO item;
+                try {
+                    item = gradeOne(question, userAnswer, language, fullScore);
+                } catch (Exception e) {
+                    // 单题批改失败不能拖垮整卷：记 0 分并保留作答，其余题目照常出分
+                    log.warn("第 {} 题批改失败: {}", i + 1, e.getMessage());
+                    item = new GradingItemVO();
+                    item.setScore(BigDecimal.ZERO);
+                    item.setFullScore(fullScore);
+                    item.setCorrect(false);
+                    item.setErrorReason("批改服务暂时不可用，本题按 0 分计；你的作答已保存");
+                }
                 item.setIndex(i);
                 item.setQuestionId(question.getQuestionId());
                 item.setType(question.getType());
