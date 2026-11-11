@@ -82,7 +82,10 @@ public class ExamServiceImpl extends ServiceImpl<ExamPaperMapper, ExamPaper> imp
                 ctx.missingRequirements);
         boolean supported = industrySupport.isItJob(ctx.jobTitle, ctx.jdText, techStack);
         techStack.setItSupported(supported);
-        techStack.setCodingRequired(supported && industrySupport.requiresCoding(ctx.jobTitle, techStack));
+        techStack.setCodingRequired(supported
+                && codeSandboxService.codingRunnable(ctx.jobTitle(),
+                        String.join(" ", techStack.getTechStacks() == null ? List.of() : techStack.getTechStacks()))
+                && industrySupport.requiresCoding(ctx.jobTitle, techStack));
         if (!supported) {
             techStack.setUnsupportedReason(industrySupport.unsupportedReason());
         }
@@ -111,10 +114,12 @@ public class ExamServiceImpl extends ServiceImpl<ExamPaperMapper, ExamPaper> imp
             }
 
             // 真题优先：按岗位技术栈从大厂题库选题，不足部分再由 AI 补齐
-            // 冷门语言岗位（Go/Rust/PHP 等）不生成编程题，避免出现无法在线运行的题目
+            // 冷门语言岗位（Go/Rust/PHP 等）不生成编程题，避免出现无法在线运行的题目；
+            // 判不出语言的技术岗仍然出编程题，与「含编程题」的提示保持一致
             String codeLanguage = codeSandboxService.resolveLanguage(ctx.jobTitle(),
                     String.join(" ", techStack.getTechStacks() == null ? List.of() : techStack.getTechStacks()));
-            boolean codingRequired = !codeLanguage.isEmpty() && codeSandboxService.supports(codeLanguage)
+            boolean codingRequired = codeSandboxService.codingRunnable(ctx.jobTitle(),
+                    String.join(" ", techStack.getTechStacks() == null ? List.of() : techStack.getTechStacks()))
                     && industrySupport.requiresCoding(ctx.jobTitle, techStack);
             int codingTarget = codingRequired ? (count >= 6 ? 2 : 1) : 0;
             List<QuestionVO> questions = new ArrayList<>();
