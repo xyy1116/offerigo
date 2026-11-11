@@ -32,4 +32,10 @@ class AiSafetyGuardTest {
         assertEquals(20000, AiSafetyGuard.sanitizeOutput("字".repeat(30000)).length());
         assertEquals("正常文本", AiSafetyGuard.sanitizeOutput("正常文本"));
     }
+
+    @Test
+    void sanitizeOutputMasksBlockedWords() {
+        assertEquals("这是一段＊＊＊内容", AiSafetyGuard.sanitizeOutput("这是一段色情内容"));
+        assertEquals("正常求职信正文", AiSafetyGuard.sanitizeOutput("正常求职信正文"));
+    }
 }

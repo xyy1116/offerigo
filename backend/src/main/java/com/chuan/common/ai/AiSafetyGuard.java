@@ -23,6 +23,16 @@ public final class AiSafetyGuard {
 
     private static final Pattern SECRET = Pattern.compile("sk-[A-Za-z0-9]{16,}");
 
+    /**
+     * 输出内容过滤：命中明确违规词时打码。
+     * 只拦「无论如何都不该出现在求职文书里」的类别，避免误伤正常表达。
+     */
+    private static final Pattern BLOCKED = Pattern.compile(
+            "(色情|裸聊|约炮|嫖娼|毒品|冰毒|海洛因|赌博|博彩|洗钱|诈骗话术|枪支|炸弹制作|恐怖袭击|自杀教程)",
+            Pattern.CASE_INSENSITIVE);
+
+    private static final String MASK = "＊＊＊";
+
     private AiSafetyGuard() {
     }
 
@@ -36,12 +46,13 @@ public final class AiSafetyGuard {
                 + "<<<DATA\n" + text + "\n>>>DATA";
     }
 
-    /** 输出兜底：抹除疑似密钥、截断超长内容。 */
+    /** 输出兜底：抹除疑似密钥、过滤违规词、截断超长内容。 */
     public static String sanitizeOutput(String output) {
         if (output == null) {
             return "";
         }
         String cleaned = SECRET.matcher(output).replaceAll("[已隐藏]");
+        cleaned = BLOCKED.matcher(cleaned).replaceAll(MASK);
         return cleaned.length() > MAX_OUTPUT ? cleaned.substring(0, MAX_OUTPUT) : cleaned;
     }
 }
