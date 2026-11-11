@@ -47,6 +47,9 @@ public class InterviewSession {
 
     /** 面试官调研简报：开场前由 Agent 通过工具检索素材库与题库生成，注入系统提示 */
     private String interviewerBrief;
+
+    /** 开场简报的异步任务：与 WS 连接准备并行，避免阻塞回复线程 */
+    private java.util.concurrent.Future<com.chuan.module.interview.service.InterviewBriefAgent.Brief> briefFuture;
     /** 当前所处阶段：overview/tech/project/scenario/reverse */
     private String stage;
     /** 当前阶段已提出的正式问题数 */

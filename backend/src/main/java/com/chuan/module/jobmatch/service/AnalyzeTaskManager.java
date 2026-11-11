@@ -134,4 +134,16 @@ public class AnalyzeTaskManager {
         vo.setError(error);
         runningByUser.remove(userId);
     }
+
+    /** 定期清理已结束的任务：结果对象较大，不能长期留在内存里 */
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 10 * 60_000L)
+    public synchronized void cleanupFinished() {
+        long cutoff = System.currentTimeMillis() - 30 * 60_000L;
+        tasks.entrySet().removeIf(entry -> {
+            AnalyzeTaskVO vo = entry.getValue();
+            return !"RUNNING".equals(vo.getStatus())
+                    && vo.getStartedAt() != null
+                    && vo.getStartedAt() < cutoff;
+        });
+    }
 }

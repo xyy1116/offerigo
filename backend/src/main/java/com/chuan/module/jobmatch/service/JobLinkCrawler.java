@@ -112,6 +112,11 @@ public class JobLinkCrawler {
                     .followRedirects(true)
                     .ignoreHttpErrors(true);
             Connection.Response resp = conn.execute();
+            // 重定向可能把请求带去内网地址，必须校验最终 URL
+            if (!SafeUrlValidator.isSafeHttpUrl(resp.url().toString())) {
+                log.warn("抓取被重定向到不安全地址，已丢弃: {}", resp.url());
+                return r;
+            }
             Document doc = resp.parse();
             r.setReachable(resp.statusCode() >= 200 && resp.statusCode() < 400);
             r.setText(doc.body() == null ? "" : doc.body().text());
@@ -138,6 +143,11 @@ public class JobLinkCrawler {
                     .setViewportSize(1440, 900));
             page = context.newPage();
             page.navigate(url);
+            // 重定向后可能落到内网地址，抓正文前先校验最终 URL
+            if (!SafeUrlValidator.isSafeHttpUrl(page.url())) {
+                log.warn("页面被重定向到不安全地址，已丢弃: {}", page.url());
+                return r;
+            }
             try {
                 page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(6000));
             } catch (Exception ignore) {

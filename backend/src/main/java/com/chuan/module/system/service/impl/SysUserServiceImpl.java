@@ -23,6 +23,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 /**
@@ -137,16 +139,51 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
     @Override
     public void resetPassword(ForgotResetDTO dto) {
+        String username = dto.getUsername() == null ? "" : dto.getUsername().trim();
+        assertNotLocked(username);
         SysUser user = getOne(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getUsername, dto.getUsername()));
+                .eq(SysUser::getUsername, username));
         if (user == null) {
             throw new BusinessException("账号不存在");
         }
         if (!StringUtils.hasText(user.getSecurityAnswer())
                 || !passwordEncoder.matches(dto.getSecurityAnswer(), user.getSecurityAnswer())) {
+            recordFailure(username);
             throw new BusinessException("密保答案错误");
         }
+        clearFailures(username);
         user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
         updateById(user);
+    }
+
+    // ==================== 找回密码失败锁定 ====================
+    // shortcut: 计数放在单机内存里，多实例部署时各自计数；需要跨实例时应改为 Redis。
+
+    private static final int MAX_FORGOT_FAILURES = 5;
+    private static final long FORGOT_LOCK_MS = 15 * 60 * 1000L;
+
+    private final Map<String, long[]> forgotFailures = new ConcurrentHashMap<>();
+
+    private void assertNotLocked(String username) {
+        long[] state = forgotFailures.get(username);
+        if (state != null && state[1] > System.currentTimeMillis()) {
+            long minutes = Math.max(1, (state[1] - System.currentTimeMillis()) / 60000);
+            throw new BusinessException("尝试次数过多，请 " + minutes + " 分钟后再试");
+        }
+    }
+
+    private void recordFailure(String username) {
+        long[] state = forgotFailures.computeIfAbsent(username, k -> new long[2]);
+        synchronized (state) {
+            state[0]++;
+            if (state[0] >= MAX_FORGOT_FAILURES) {
+                state[1] = System.currentTimeMillis() + FORGOT_LOCK_MS;
+                state[0] = 0;
+            }
+        }
+    }
+
+    private void clearFailures(String username) {
+        forgotFailures.remove(username);
     }
 }

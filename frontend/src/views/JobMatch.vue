@@ -3118,10 +3118,13 @@ async function doBatchSave(records, decisions, time) {
     content: stripTemporaryStatus((r.content || '').trim()),
     createTime: time || null
   }))
+  const replacedIds = []
   for (const d of decisions) {
     const idx = d.recordIndex
     if (d.decision === 'new' && d.existing && d.existing.id) {
       if (items[idx]) items[idx].replaceId = d.existing.id
+      // 后端会按 replaceId 删除旧记录，本地也要同步移除，否则侧边栏仍显示已被删除的素材
+      replacedIds.push(d.existing.id)
     } else if (d.decision === 'old') {
       items[idx] = null
     }
@@ -3134,6 +3137,12 @@ async function doBatchSave(records, decisions, time) {
   const res = await batchSaveKnowledge(finalItems)
   // 乐观更新：直接追加到本地，避免 listKnowledge 触发后端迁移/重分类 LLM 导致分数更新延迟
   const saved = res.data || []
+  if (replacedIds.length) {
+    knowledgeList.value = knowledgeList.value.filter((e) => !replacedIds.includes(e.id))
+    closedGaps.value = Object.fromEntries(
+      Object.entries(closedGaps.value).filter(([, id]) => !replacedIds.includes(id))
+    )
+  }
   if (saved.length) knowledgeList.value = [...saved, ...knowledgeList.value]
   freeAddContent.value = ''
   const addedCount = saved.length || finalItems.length

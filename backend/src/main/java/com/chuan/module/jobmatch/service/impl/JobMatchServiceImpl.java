@@ -329,10 +329,31 @@ public class JobMatchServiceImpl implements JobMatchService {
 
     @Override
     public List<KnowledgeEntryVO> listKnowledge(Long userId) {
-        migrateLegacy(userId);
-        reclassifyUnclassified(userId);
-        reformatExisting(userId);
+        migrateOnce(userId);
         return loadKnowledge(userId).stream().map(this::toKnowledgeVO).collect(Collectors.toList());
+    }
+
+    /** 历史数据迁移每个用户只跑一次，整体放在事务里，避免并发重复入库或删一半丢数据。 */
+    private final java.util.Set<Long> migratedUsers = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+
+    private void migrateOnce(Long userId) {
+        if (!migratedUsers.add(userId)) {
+            return;
+        }
+        try {
+            transactionTemplate.execute(status -> {
+                migrateLegacy(userId);
+                reclassifyUnclassified(userId);
+                reformatExisting(userId);
+                return null;
+            });
+        } catch (Exception e) {
+            // 迁移失败不阻塞读取，下次请求再试
+            migratedUsers.remove(userId);
+            log.warn("素材历史数据迁移失败，userId={}: {}", userId, e.getMessage());
+        }
     }
 
     @Override

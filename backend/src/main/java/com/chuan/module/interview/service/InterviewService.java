@@ -21,6 +21,9 @@ public interface InterviewService {
     /** 删除面试记录 */
     void deleteRecord(Long id, Long userId);
 
+    /** 开始新面试时丢弃上一条未完成的快照，避免多端并发互相覆盖 */
+    void deleteInProgressSnapshot(Long userId);
+
     /** 保存一次面试记录并返回记录 ID */
     Long saveRecord(Long userId, String position, String transcript, InterviewReportVO report, BigDecimal score);
 

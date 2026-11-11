@@ -62,6 +62,7 @@ public class JobCrawlTask {
     private final ObjectMapper objectMapper;
     private final TargetJobMapper targetJobMapper;
     private final JobLinkCrawler jobLinkCrawler;
+    private final com.chuan.module.jobrecommend.mapper.UserTargetJobMapper userTargetJobMapper;
 
     /** 定时任务与按需爬取可能同时触发，串行化避免重复入库。 */
     private final ReentrantLock crawlLock = new ReentrantLock();
@@ -92,6 +93,38 @@ public class JobCrawlTask {
             log.warn("本次爬取未获得任何岗位，请检查三个来源的接口是否仍可用");
         }
         log.info("每日岗位爬取完成，新增 {} 条，关键词={}", saved, keywords);
+    }
+
+    /** 爬取岗位保留天数：超过后清理，避免表无限增长拖慢查询 */
+    private static final int CRAWL_KEEP_DAYS = 30;
+
+    /** 每天 04:00 清理过期爬取岗位；用户已加入目标岗位的记录保留 */
+    @Scheduled(cron = "0 0 4 * * ?", zone = "Asia/Shanghai")
+    public void cleanupOldCrawlJobs() {
+        try {
+            LocalDate cutoff = LocalDate.now().minusDays(CRAWL_KEEP_DAYS);
+            List<CrawlJob> old = crawlJobMapper.selectList(new LambdaQueryWrapper<CrawlJob>()
+                    .select(CrawlJob::getId)
+                    .lt(CrawlJob::getCrawlDate, cutoff));
+            if (old.isEmpty()) {
+                return;
+            }
+            List<Long> ids = old.stream().map(CrawlJob::getId).collect(java.util.stream.Collectors.toList());
+            List<Long> referenced = userTargetJobMapper.selectList(
+                            new LambdaQueryWrapper<com.chuan.module.jobrecommend.entity.UserTargetJob>()
+                                    .select(com.chuan.module.jobrecommend.entity.UserTargetJob::getCrawlJobId)
+                                    .in(com.chuan.module.jobrecommend.entity.UserTargetJob::getCrawlJobId, ids))
+                    .stream()
+                    .map(com.chuan.module.jobrecommend.entity.UserTargetJob::getCrawlJobId)
+                    .collect(java.util.stream.Collectors.toList());
+            ids.removeAll(referenced);
+            if (!ids.isEmpty()) {
+                crawlJobMapper.deleteBatchIds(ids);
+            }
+            log.info("清理 {} 天前的爬取岗位 {} 条，保留仍被引用的 {} 条", CRAWL_KEEP_DAYS, ids.size(), referenced.size());
+        } catch (Exception e) {
+            log.warn("清理历史岗位失败: {}", e.getMessage());
+        }
     }
 
     public boolean isCrawling() {

@@ -72,7 +72,7 @@ public class JobMaterialSelector {
         if (candidates.size() <= MAX_RELEVANT) {
             return entries;
         }
-        List<double[]> vectors = embeddingClient.embedBatch(texts);
+        List<double[]> vectors = embedCached(texts);
         if (vectors.isEmpty() || vectors.stream().noneMatch(v -> v != null && v.length > 0)) {
             return entries;
         }
@@ -189,6 +189,52 @@ public class JobMaterialSelector {
         }
         return result;
     }
+
+    /**
+     * 素材向量缓存：内容不变就不重复调用 Embedding，键是素材正文。
+     * 只缓存成功的向量，容量满了按访问顺序淘汰最久未用的。
+     */
+    private List<double[]> embedCached(List<String> texts) {
+        List<double[]> result = new ArrayList<>(texts.size());
+        List<String> misses = new ArrayList<>();
+        synchronized (vectorCache) {
+            for (String text : texts) {
+                double[] hit = vectorCache.get(text);
+                if (hit == null) {
+                    if (!misses.contains(text)) {
+                        misses.add(text);
+                    }
+                }
+            }
+        }
+        if (!misses.isEmpty()) {
+            List<double[]> embedded = embeddingClient.embedBatch(misses);
+            synchronized (vectorCache) {
+                for (int i = 0; i < misses.size() && i < embedded.size(); i++) {
+                    double[] v = embedded.get(i);
+                    if (v != null && v.length > 0) {
+                        vectorCache.put(misses.get(i), v);
+                    }
+                }
+            }
+        }
+        synchronized (vectorCache) {
+            for (String text : texts) {
+                result.add(vectorCache.get(text));
+            }
+        }
+        return result;
+    }
+
+    private static final int VECTOR_CACHE_SIZE = 500;
+
+    private final java.util.Map<String, double[]> vectorCache =
+            new java.util.LinkedHashMap<>(256, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(java.util.Map.Entry<String, double[]> eldest) {
+                    return size() > VECTOR_CACHE_SIZE;
+                }
+            };
 
     private String join(String... parts) {
         StringBuilder sb = new StringBuilder();

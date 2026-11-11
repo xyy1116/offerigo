@@ -147,6 +147,24 @@ public class JobApplicationService {
         if (!Integer.valueOf(1).equals(record.getDraft())) {
             throw new BusinessException("该投递记录已入库");
         }
+        // 同一岗位只保留一条正式记录：已有正式记录时合并草稿，避免重复投递与提醒重复计数
+        if (record.getJobId() != null) {
+            JobApplication existing = applicationMapper.selectOne(new LambdaQueryWrapper<JobApplication>()
+                    .eq(JobApplication::getUserId, userId)
+                    .eq(JobApplication::getJobId, record.getJobId())
+                    .eq(JobApplication::getDraft, 0)
+                    .ne(JobApplication::getId, record.getId())
+                    .last("limit 1"));
+            if (existing != null) {
+                existing.setAppliedAt(LocalDateTime.now());
+                existing.setJobLink(record.getJobLink());
+                existing.setJobName(record.getJobName());
+                existing.setCompanyName(record.getCompanyName());
+                applicationMapper.updateById(existing);
+                applicationMapper.deleteById(record.getId());
+                return toVO(existing, followUpDays(userId));
+            }
+        }
         record.setDraft(0);
         record.setStatus(STATUSES.get(0));
         if (req != null && StringUtils.hasText(req.getResumeVersion()) && !StringUtils.hasText(record.getResumeFileName())) {

@@ -387,8 +387,13 @@ public class ExamServiceImpl extends ServiceImpl<ExamPaperMapper, ExamPaper> imp
     @Override
     public List<ExamPaperVO> history(Long userId) {
         List<ExamPaper> papers = list(new LambdaQueryWrapper<ExamPaper>()
+                // 只取列表需要的列：questions_json / answers_json / report_json 可能很大，读出来也没用
+                .select(ExamPaper::getId, ExamPaper::getJobTitle, ExamPaper::getPaperType,
+                        ExamPaper::getTotalCount, ExamPaper::getTotalScore, ExamPaper::getUserScore,
+                        ExamPaper::getStatus, ExamPaper::getCreateTime)
                 .eq(userId != null, ExamPaper::getUserId, userId)
-                .orderByDesc(ExamPaper::getId));
+                .orderByDesc(ExamPaper::getId)
+                .last("LIMIT 200"));
         return papers.stream().map(p -> {
             ExamPaperVO vo = new ExamPaperVO();
             BeanUtils.copyProperties(p, vo);
@@ -417,6 +422,11 @@ public class ExamServiceImpl extends ServiceImpl<ExamPaperMapper, ExamPaper> imp
     @Override
     public List<WrongQuestionVO> wrongList(String type, String knowledge, String difficulty, String jobTitle, String keyword, Long userId) {
         List<WrongQuestion> list = wrongQuestionMapper.selectList(new LambdaQueryWrapper<WrongQuestion>()
+                // 列表只需要摘要字段，题干大 JSON 不查出来
+                .select(WrongQuestion::getId, WrongQuestion::getPaperId, WrongQuestion::getJobTitle,
+                        WrongQuestion::getQuestionType, WrongQuestion::getDifficulty,
+                        WrongQuestion::getKnowledgePoint, WrongQuestion::getErrorReason,
+                        WrongQuestion::getTimesWrong, WrongQuestion::getStatus, WrongQuestion::getCreateTime)
                 .eq(userId != null, WrongQuestion::getUserId, userId)
                 .eq(StringUtils.hasText(jobTitle), WrongQuestion::getJobTitle, jobTitle)
                 .eq(StringUtils.hasText(type), WrongQuestion::getQuestionType, type)
@@ -490,7 +500,9 @@ public class ExamServiceImpl extends ServiceImpl<ExamPaperMapper, ExamPaper> imp
         if (question == null) {
             throw new BusinessException("错题数据异常");
         }
-        GradingItemVO item = gradeOne(question, req.getAnswer(), null, fullScoreOf(question.getType()));
+        // 错题本不存语言：按岗位名推断，编程题尽量走真实执行判分，而不是大模型看代码
+        String redoLanguage = codeSandboxService.resolveLanguage(w.getJobTitle(), null);
+        GradingItemVO item = gradeOne(question, req.getAnswer(), redoLanguage, fullScoreOf(question.getType()));
         item.setIndex(0);
         item.setQuestionId(question.getQuestionId());
         item.setType(question.getType());
@@ -545,9 +557,15 @@ public class ExamServiceImpl extends ServiceImpl<ExamPaperMapper, ExamPaper> imp
             return item;
         }
         GradingItemVO item = examClient.gradeSubjective(question, userAnswer, fullScore);
-        if (item.getScore() == null) {
-            item.setScore(BigDecimal.ZERO);
+        // 模型可能给出负数或超过满分的分数，统一钳制到 [0, 满分]
+        BigDecimal score = item.getScore() == null ? BigDecimal.ZERO : item.getScore();
+        if (score.compareTo(BigDecimal.ZERO) < 0) {
+            score = BigDecimal.ZERO;
         }
+        if (fullScore != null && score.compareTo(fullScore) > 0) {
+            score = fullScore;
+        }
+        item.setScore(score);
         return item;
     }
 

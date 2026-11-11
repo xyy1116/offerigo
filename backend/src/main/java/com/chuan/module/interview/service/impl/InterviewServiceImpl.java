@@ -101,6 +101,13 @@ public class InterviewServiceImpl extends ServiceImpl<InterviewRecordMapper, Int
     }
 
     @Override
+    public void deleteInProgressSnapshot(Long userId) {
+        remove(new LambdaQueryWrapper<InterviewRecord>()
+                .eq(InterviewRecord::getUserId, userId)
+                .eq(InterviewRecord::getStatus, "in_progress"));
+    }
+
+    @Override
     public Long saveSnapshot(Long userId, String position, String jdText, String techStack,
                              String questionBankKey, String stage, Integer stageQuestionCount,
                              Integer questionCount, String transcript) {

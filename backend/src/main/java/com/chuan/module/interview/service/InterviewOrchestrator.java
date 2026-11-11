@@ -63,6 +63,9 @@ public class InterviewOrchestrator {
     /** 每场面试最多压力提问次数 */
     private static final int MAX_PRESSURE = 3;
 
+    /** 同时进行的面试会话上限：超过后新会话直接提示稍后再试，避免线程池被打满 */
+    private static final int MAX_ACTIVE_SESSIONS = 20;
+
     /** 开场简报最长等待时间：超时直接放弃，不拖住第一个问题。 */
     private static final int BRIEF_TIMEOUT_SECONDS = 15;
 
@@ -268,6 +271,8 @@ public class InterviewOrchestrator {
     public void onDisconnected(WebSocketSession browserSession) {
         InterviewSession s = sessions.remove(browserSession.getId());
         if (s != null) {
+            // 断开即作废在途生成，避免旧任务把旧 transcript 回写到续接后的进度上
+            s.setGeneration(s.getGeneration() + 1);
             if (s.getFlushTask() != null) {
                 s.getFlushTask().cancel(true);
             }
@@ -378,7 +383,15 @@ public class InterviewOrchestrator {
         });
         holder[0] = asr;
         s.setAsrSession(asr);
-        asr.start();
+        try {
+            asr.start();
+        } catch (Exception e) {
+            // 连接失败要告诉前端，否则麦克风静默失效、用户以为在录音
+            log.warn("语音识别启动失败: {}", e.getMessage());
+            s.setAsrSession(null);
+            send(s, "asr_status", Map.of("ready", false,
+                    "message", "语音识别暂不可用，可改用文字输入"));
+        }
     }
 
     private void handleMicStop(InterviewSession s) {
@@ -395,6 +408,10 @@ public class InterviewOrchestrator {
         String position = node.path("position").asText("");
         if (!StringUtils.hasText(position)) {
             send(s, "error", Map.of("message", "请先选择面试岗位"));
+            return;
+        }
+        if (sessions.size() > MAX_ACTIVE_SESSIONS) {
+            send(s, "error", Map.of("message", "当前面试人数较多，请稍后再试"));
             return;
         }
         String jdText = node.path("jdText").asText("");
@@ -415,7 +432,9 @@ public class InterviewOrchestrator {
             s.setResumeText(loadResumeDigest(s.getUserId()));
         }
 
-        // 全新面试：推断题库方向，进入履历概览阶段
+        // 全新面试：丢弃上一条未完成快照（多端并发时不互相覆盖），并由后台线程先跑简报
+        interviewService.deleteInProgressSnapshot(s.getUserId());
+        s.setBriefFuture(briefExecutor.submit(() -> interviewBriefAgent.buildBrief(s)));
         s.setQuestionBankKey(questionBankService.inferKey(s.getPosition(), s.getTechStack()));
         s.setStage(STAGE_OVERVIEW);
         s.setQuestionsInStage(0);
@@ -483,23 +502,26 @@ public class InterviewOrchestrator {
         askNext(s, "我们继续进行面试。");
     }
 
-    /** 开场前跑一次工具调研；失败、超时或无结果时系统提示里不出现简报，面试照常进行。 */
+    /** 读取开场简报：简报已在 handleStart 里异步启动，这里只做有限等待，不占用线程池太久。 */
     private void prepareBrief(InterviewSession s) {
         if (s.getInterviewerBrief() != null) {
             return;
         }
-        Future<InterviewBriefAgent.Brief> future = briefExecutor.submit(() -> interviewBriefAgent.buildBrief(s));
+        Future<InterviewBriefAgent.Brief> future = s.getBriefFuture();
+        if (future == null) {
+            s.setInterviewerBrief("");
+            return;
+        }
         try {
             InterviewBriefAgent.Brief brief = future.get(BRIEF_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             s.setInterviewerBrief(brief.text());
-            // 把 Agent 的检索过程同步给前端，让「工具调用」这件事可见
             if (!brief.steps().isEmpty()) {
                 send(s, "agent_trace", Map.of("steps", brief.steps()));
             }
         } catch (Exception e) {
             future.cancel(true);
             s.setInterviewerBrief("");
-            log.warn("面试官简报生成超时或失败，按无简报继续: {}", e.getMessage());
+            log.warn("面试官简报未就绪，按无简报继续: {}", e.getMessage());
         }
     }
 
@@ -1119,9 +1141,15 @@ public class InterviewOrchestrator {
         if (!StringUtils.hasText(text) || s.getGeneration() != gen) {
             return;
         }
-        s.getHistory().append("面试官：").append(text).append("\n");
-        s.getTranscript().add("面试官：" + text);
-        s.setSpeaking(true);
+        // 会话状态是多线程共享的，写入与计数放在同一把锁里，避免计数漂移
+        synchronized (s) {
+            if (s.getGeneration() != gen) {
+                return;
+            }
+            s.getHistory().append("面试官：").append(text).append("\n");
+            s.getTranscript().add("面试官：" + text);
+            s.setSpeaking(true);
+        }
         send(s, "assistant_text", Map.of("text", text));
     }
 

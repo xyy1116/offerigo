@@ -77,8 +77,23 @@ public class ResumeSkillService {
                 return new Snapshot(tags, vector);
             }
         }
-        return refresh(userId);
+        // 上次刷新失败（Embedding 不可用等）后短时间内不再重试，避免每次开页面都同步跑一遍模型
+        Long failedAt = lastFailureAt.get(userId);
+        if (failedAt != null && System.currentTimeMillis() - failedAt < FAILURE_BACKOFF_MS) {
+            return new Snapshot(new ArrayList<>(), new double[0]);
+        }
+        Snapshot snapshot = refresh(userId);
+        if (snapshot.getTags().isEmpty()) {
+            lastFailureAt.put(userId, System.currentTimeMillis());
+        } else {
+            lastFailureAt.remove(userId);
+        }
+        return snapshot;
     }
+
+    private static final long FAILURE_BACKOFF_MS = 5 * 60 * 1000L;
+
+    private final java.util.Map<Long, Long> lastFailureAt = new java.util.concurrent.ConcurrentHashMap<>();
 
     /** 定时任务启动前刷新所有用户，保证 8 点爬取使用最新素材。 */
     public void refreshAll() {
