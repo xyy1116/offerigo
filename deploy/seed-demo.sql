@@ -1,7 +1,7 @@
--- 演示数据：为 admin(user_id=1) 准备素材、目标岗位与每日推荐，并把 admin/reviewer 密码重置为 xxy123456
+-- 演示数据：为 admin(user_id=1) 准备素材、目标岗位与每日推荐，并把 admin/reviewer 密码重置为 xyy123456
 -- 用法：docker exec -i chuan-mysql mysql -uroot -p<密码> --default-character-set=utf8mb4 chuan < deploy/seed-demo.sql
--- 演示用默认数据：密码统一改为 xxy123456，并为 admin 准备一份可用的素材/岗位/推荐数据
-UPDATE sys_user SET password = '$2a$10$gSHf08Mp9CKOE5gK4Nw10uy9UraYC4z2jmnsxGNJCJu.LYseRzjgK' WHERE username IN ('admin', 'reviewer');
+-- 演示用默认数据：密码统一改为 xyy123456，并为 admin 准备一份可用的素材/岗位/推荐数据
+UPDATE sys_user SET password = '$2a$10$bzVNEk1BVzZSO8JCbxec0.SAfBOtXb8p6HHjh.Qg9cvewq8G59X4i' WHERE username IN ('admin', 'reviewer');
 
 DELETE FROM knowledge_entry WHERE user_id = 1;
 INSERT INTO knowledge_entry (user_id, type, content, split_version) VALUES

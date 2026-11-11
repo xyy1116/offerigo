@@ -257,7 +257,7 @@ docker compose --env-file .env -f deploy/docker-compose.hostnet.yml up -d --buil
 | 项目 | 内容 |
 |---|---|
 | 在线演示地址 | http://47.104.161.228:18081 |
-| 评审体验账号 | `reviewer` / `xxy123456` |
-| 管理员账号 | `admin` / `xxy123456` |
+| 评审体验账号 | `reviewer` / `xyy123456` |
+| 管理员账号 | `admin` / `xyy123456` |
 | 演示视频 | 待录制 |
 | 技术文档 | [docs/技术文档.pdf](docs/技术文档.pdf) |
