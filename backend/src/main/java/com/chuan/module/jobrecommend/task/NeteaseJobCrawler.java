@@ -25,8 +25,11 @@ import java.util.Set;
 public class NeteaseJobCrawler {
 
     private static final String API = "https://hr.163.com/api/hr163/position/queryPage";
-    /** 详情页路由未公开（深链会落到前端 404），统一跳到带关键词的岗位列表页 */
-    private static final String SEARCH_PAGE = "https://hr.163.com/position/list.html?keyword=";
+    /**
+     * 网易详情页走前端路由且未公开，任何按 id 拼的深链都会落到 404，
+     * 因此统一跳到官方招聘首页，用户可按岗位名再搜。
+     */
+    private static final String HOMEPAGE = "https://hr.163.com/";
     private static final String USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
@@ -78,7 +81,8 @@ public class NeteaseJobCrawler {
                 candidate.setLocation(cut(location, 250));
                 candidate.setSalary("面议");
                 candidate.setRequirement(cut(requirement, 6000));
-                candidate.setSourceUrl(SEARCH_PAGE + enc(title));
+                // 带 jobId 参数保证每个岗位 URL 唯一（入库按 URL 去重），打开后落在官网首页
+                candidate.setSourceUrl(HOMEPAGE + "?jobId=" + id);
                 candidate.setEmbedText(cut(title + "\n网易\n" + location + "\n" + requirement, 4000));
                 out.add(candidate);
             }
@@ -109,11 +113,4 @@ public class NeteaseJobCrawler {
         return text.length() <= max ? text : text.substring(0, max);
     }
 
-    private String enc(String value) {
-        try {
-            return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.name());
-        } catch (Exception e) {
-            return value;
-        }
-    }
 }
