@@ -11,6 +11,9 @@ const CN_STOP_BIGRAMS = new Set([
   '职责', '公司', '团队', '业务', '系统', '平台', '开发', '设计', '实现', '支持', '包括',
   '持续', '推动', '落地', '使用', '基础', '知识', '技术', '项目', '产品', '需求', '功能',
   '服务', '应用', '方案', '流程', '质量', '效率', '问题', '内容', '方向', '领域', '人员',
+  '分析', '数据', '洞察', '商业', '经营', '策略', '制定', '研究', '报告', '探索', '兴趣',
+  '工具', '技能', '规划', '运营', '供给', '市场', '趋势', '协同', '迭代', '监控', '输出',
+  '框架', '主流', '调试', '集成', '构建', '部署', '维护', '搭建', '优化', '提升', '实践',
 ])
 
 /** 英文停用词（技术词之外的常见英文）。 */
@@ -161,6 +164,8 @@ export function requirementCovered(requirement, entryText) {
 
   // 0. 经验年限：按数值比较（「五年以上经验」vs「工作年限6年」）
   if (experienceRequirementCovered(req, text)) return true
+  // 要求里写了「N 年以上」而素材不满足时，学历/技能词都不能算覆盖这条要求
+  if (/(\d+|[一二三四五六七八九十])\s*年以上/.test(req)) return false
 
   // 1. 英文/技术词
   const reqLatin = latinTokens(req)
@@ -190,17 +195,26 @@ export function requirementCovered(requirement, entryText) {
     if (p.length >= 3 && text.includes(p)) return true
   }
 
-  // 4. 中文 bigram 重叠：至少 3 个（仅靠零散双字词不足以判定覆盖）
-  const reqBigrams = cnBigrams(req)
+  // 4. 中文 bigram 重叠：既要至少 3 个，也要占该要求 bigram 的三成以上，
+  //    否则「分析/数据」这类通用词凑够三个就误判为已覆盖
+  const reqBigrams = cnBigrams(cleanForBigram(req))
   if (reqBigrams.size) {
-    const entryBigrams = cnBigrams(text)
+    const entryBigrams = cnBigrams(cleanForBigram(text))
     let hits = 0
     for (const g of reqBigrams) {
-      if (entryBigrams.has(g)) {
-        hits++
-        if (hits >= 3) return true
-      }
+      if (entryBigrams.has(g)) hits++
     }
+    if (hits >= 3 && hits / reqBigrams.size >= 0.3) return true
   }
   return false
+}
+
+/**
+ * bigram 之前先去掉「熟练掌握 / 熟悉 / 具备 / 等」这类虚词，
+ * 否则「熟练+掌握」「等+主流」这种跨词双字会凭空制造命中。
+ */
+function cleanForBigram(text) {
+  return toText(text)
+    .replace(/(熟练掌握|熟练使用|熟练运用|精通|熟悉|了解|具备|具有|较强|良好的?|相关的?|等)/g, ' ')
+    .replace(/[与和及或]/g, ' ')
 }

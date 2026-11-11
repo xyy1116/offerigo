@@ -338,9 +338,34 @@ public class JobCrawlTask {
                 || w.contains("深度学习") || w.contains("人工智能") || w.contains("ai");
     }
 
+    /**
+     * 只保留国内岗位：工作地点必须命中一个国内城市/地区。
+     * 用白名单而不是黑名单——「圣保罗」「利雅得」「科威特城」这类中文译名很容易漏。
+     */
+    private static final java.util.List<String> DOMESTIC_HINTS = java.util.List.of(
+            "北京", "上海", "广州", "深圳", "杭州", "成都", "武汉", "南京", "西安", "苏州",
+            "重庆", "天津", "长沙", "郑州", "合肥", "厦门", "青岛", "济南", "大连", "沈阳",
+            "哈尔滨", "长春", "福州", "南昌", "昆明", "贵阳", "南宁", "海口", "兰州", "西宁",
+            "银川", "乌鲁木齐", "呼和浩特", "石家庄", "太原", "宁波", "无锡", "东莞", "佛山",
+            "珠海", "中山", "惠州", "常州", "南通", "徐州", "温州", "嘉兴", "绍兴", "金华",
+            "台州", "泉州", "烟台", "潍坊", "洛阳", "香港", "澳门", "台北", "全国", "远程");
+
+    /** 地点为空时按国内处理（部分岗位只写了"面议"级别的地点信息） */
+    private boolean isDomestic(String location) {
+        if (!StringUtils.hasText(location)) {
+            return true;
+        }
+        return DOMESTIC_HINTS.stream().anyMatch(location::contains);
+    }
+
     private int save(List<CrawlCandidate> pending, LocalDate today) {
         if (pending.isEmpty()) {
             return 0;
+        }
+        int before = pending.size();
+        pending.removeIf(c -> !isDomestic(c.getLocation()));
+        if (pending.size() < before) {
+            log.info("过滤掉 {} 条境外岗位", before - pending.size());
         }
         List<String> texts = new ArrayList<>(pending.size());
         for (CrawlCandidate candidate : pending) {
