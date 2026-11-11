@@ -18,6 +18,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 /**
  * 编程题真实运行沙箱（本机进程级隔离）：临时目录、超时、内存与输出上限、并发限制。
@@ -53,6 +54,52 @@ public class CodeSandboxService {
         return "java".equals(lang) || "javascript".equals(lang);
     }
 
+    /**
+     * 危险调用特征：只拦文件、网络、进程、反射、退出这几类，
+     * 正常的算法题（Scanner / BufferedReader / 集合 / 字符串）不受影响。
+     *
+     * shortcut: 关键字黑名单挡不住混淆或反射绕过，这里只是减速带；
+     * 要做到真正隔离需要容器级沙箱，公网长期开放前应替换。
+     */
+    private static final Map<String, Pattern> JAVA_FORBIDDEN = forbiddenMap(new String[][]{
+            {"Runtime.exec", "Runtime\\s*\\.\\s*getRuntime"},
+            {"ProcessBuilder", "new\\s+ProcessBuilder"},
+            {"ProcessHandle", "ProcessHandle"},
+            {"System.exit", "System\\s*\\.\\s*exit"},
+            {"反射/类加载", "Class\\s*\\.\\s*forName|ClassLoader|getDeclared(Method|Field|Constructor)|MethodHandles|sun\\.misc\\.Unsafe"},
+            {"文件读写", "new\\s+File\\s*\\(|\\bFiles\\s*\\.|\\bPaths\\s*\\.|File(Input|Output)Stream|FileReader|FileWriter|RandomAccessFile"},
+            {"网络访问", "new\\s+(Socket|ServerSocket|URL)\\s*\\(|HttpClient|URLConnection|SocketChannel|FileChannel"},
+            {"数据库", "java\\.sql"},
+    });
+
+    private static final Map<String, Pattern> JS_FORBIDDEN = forbiddenMap(new String[][]{
+            {"Node 内建模块", "(require|from)\\s*\\(?\\s*['\"](node:)?(fs|net|http|https|dgram|child_process|worker_threads|vm|cluster|inspector)"},
+            {"进程操作", "process\\s*\\.\\s*(binding|kill|dlopen)"},
+            {"其他运行时", "\\bDeno\\s*\\.|\\bBun\\s*\\."},
+    });
+
+    private static Map<String, Pattern> forbiddenMap(String[][] entries) {
+        Map<String, Pattern> map = new java.util.LinkedHashMap<>();
+        for (String[] entry : entries) {
+            map.put(entry[0], Pattern.compile(entry[1]));
+        }
+        return map;
+    }
+
+    private List<String> forbiddenUsages(String lang, String code) {
+        Map<String, Pattern> rules = "java".equals(lang) ? JAVA_FORBIDDEN : JS_FORBIDDEN;
+        List<String> hits = new ArrayList<>();
+        for (Map.Entry<String, Pattern> rule : rules.entrySet()) {
+            if (rule.getValue().matcher(code).find()) {
+                hits.add(rule.getKey());
+                if (hits.size() >= 3) {
+                    break;
+                }
+            }
+        }
+        return hits;
+    }
+
     /** 自定义输入调试：运行一次并返回 stdout / stderr / 超时信息。 */
     public CodeRunResultVO runDebug(String language, String code, String stdin) {
         CodeTestCaseVO testCase = new CodeTestCaseVO();
@@ -71,6 +118,11 @@ public class CodeSandboxService {
         }
         if (code.length() > maxCode) {
             return unsupported("代码过长，最多 " + maxCode + " 个字符");
+        }
+        List<String> violations = forbiddenUsages(lang, code);
+        if (!violations.isEmpty()) {
+            return unsupported("代码包含不允许的操作：" + String.join("、", violations)
+                    + "。为避免影响服务器安全，运行环境只允许纯计算类代码。");
         }
         List<CodeTestCaseVO> cases = testCases == null ? List.of()
                 : testCases.stream().limit(MAX_CASES).toList();

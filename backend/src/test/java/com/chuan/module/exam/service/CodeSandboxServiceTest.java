@@ -73,6 +73,45 @@ class CodeSandboxServiceTest {
         assertTrue(result.getCases().get(0).getTimedOut());
     }
 
+    @Test
+    void blocksDangerousJavaCalls() {
+        String code = """
+                public class Main {
+                    public static void main(String[] args) throws Exception {
+                        Runtime.getRuntime().exec("touch /tmp/pwned");
+                    }
+                }
+                """;
+        CodeRunResultVO result = sandbox.run("java", code, List.of(testCase("", "")));
+        assertFalse(result.getSupported());
+        assertTrue(result.getMessage().contains("不允许"));
+    }
+
+    @Test
+    void blocksDangerousJavaScriptModules() {
+        String code = "const cp = require('child_process'); cp.execSync('id');";
+        CodeRunResultVO result = sandbox.run("javascript", code, List.of(testCase("", "")));
+        assertFalse(result.getSupported());
+        assertTrue(result.getMessage().contains("不允许"));
+    }
+
+    @Test
+    void keepsNormalAlgorithmsRunnable() {
+        String code = """
+                import java.io.BufferedReader;
+                import java.io.InputStreamReader;
+                public class Main {
+                    public static void main(String[] args) throws Exception {
+                        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+                        System.out.println(Integer.parseInt(br.readLine().trim()) + 1);
+                    }
+                }
+                """;
+        CodeRunResultVO result = sandbox.run("java", code, List.of(testCase("41", "42")));
+        assertTrue(result.getSupported());
+        assertEquals(1, result.getPassed());
+    }
+
     private CodeTestCaseVO testCase(String input, String expected) {
         CodeTestCaseVO testCase = new CodeTestCaseVO();
         testCase.setInput(input);
