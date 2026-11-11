@@ -26,14 +26,19 @@ import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -58,6 +63,9 @@ public class ApplicationService {
     private final PdfHtmlRenderer pdfHtmlRenderer;
     private final GenerationProgressStore progressStore;
     private final ObjectMapper objectMapper;
+
+    /** 流式生成的执行线程，避免占用请求线程 */
+    private final ExecutorService streamExecutor = Executors.newFixedThreadPool(4);
 
     /** 评估结果按「用户 + 岗位 + 素材/要求内容」缓存：内容不变时刷新返回同一份结果，分数不会漂移。 */
     private final Map<String, MatchResultVO> evaluateCache = new ConcurrentHashMap<>();
@@ -125,6 +133,55 @@ public class ApplicationService {
             }
         } finally {
             progressStore.done(userId, GenerationProgressStore.TYPE_COVER, jobId);
+        }
+    }
+
+    /** 流式生成求职信：delta 事件逐个推正文片段，done 事件推完整结构与引用素材。 */
+    public SseEmitter streamCoverLetter(Long userId, Long jobId) {
+        SseEmitter emitter = new SseEmitter(180_000L);
+        emitter.onTimeout(emitter::complete);
+        streamExecutor.submit(() -> {
+            progressStore.start(userId, GenerationProgressStore.TYPE_COVER, jobId);
+            try {
+                TargetJob job = loadJob(userId, jobId);
+                List<KnowledgeEntry> selected = selectRelevantEntries(userId, job);
+                progressStore.stage(userId, GenerationProgressStore.TYPE_COVER, jobId,
+                        GenerationProgressStore.GENERATING);
+                String text = deepSeekClient.writeCoverLetterStream(
+                        toKnowledgeText(selected), job.getJobName(), job.getCompanyName(), job.getJobRequirement(),
+                        // SSE 的 data 不能含裸换行，逐段用 JSON 字符串编码
+                        delta -> sendEvent(emitter, "delta", writeJson(delta)));
+                Map<String, Object> done = new LinkedHashMap<>();
+                done.put("subject", "应聘" + (job.getJobName() == null ? "" : job.getJobName()) + " 求职信");
+                done.put("greeting", "尊敬的招聘负责人：");
+                done.put("body", indentCoverBody(text));
+                done.put("materials", toMaterialRefs(selected));
+                sendEvent(emitter, "done", writeJson(done));
+                emitter.complete();
+            } catch (Exception e) {
+                log.error("流式生成求职信失败", e);
+                sendEvent(emitter, "error", writeJson(e.getMessage() == null ? "生成失败，请稍后重试" : e.getMessage()));
+                emitter.complete();
+            } finally {
+                progressStore.done(userId, GenerationProgressStore.TYPE_COVER, jobId);
+            }
+        });
+        return emitter;
+    }
+
+    private void sendEvent(SseEmitter emitter, String name, String data) {
+        try {
+            emitter.send(SseEmitter.event().name(name).data(data));
+        } catch (IOException e) {
+            // 客户端已断开，忽略
+        }
+    }
+
+    private String writeJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            return "\"\"";
         }
     }
 

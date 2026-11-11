@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -50,6 +51,12 @@ public class ApplicationController {
     @GetMapping("/{jobId}/cover-letter")
     public Result<CoverLetterVO> coverLetter(@PathVariable Long jobId, HttpServletRequest request) {
         return Result.success(applicationService.generateCoverLetter(userId(request), jobId));
+    }
+
+    /** 流式生成求职信：SSE 逐段推送正文，结束时推送完整结构与引用素材。 */
+    @GetMapping(value = "/{jobId}/cover-letter/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter coverLetterStream(@PathVariable Long jobId, HttpServletRequest request) {
+        return applicationService.streamCoverLetter(userId(request), jobId);
     }
 
     /** 生成任务的真实阶段（前端在生成期间轮询）。 */

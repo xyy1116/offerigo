@@ -184,7 +184,7 @@
             <div class="export-actions">
               <button
                 class="button"
-                :disabled="coverExporting"
+                :disabled="coverExporting || coverLoading"
                 :class="{ 'is-loading': coverExporting && coverExportFormat === 'pdf' }"
                 @click="downloadCover('pdf')"
               >
@@ -192,7 +192,7 @@
               </button>
               <button
                 class="button button--plain"
-                :disabled="coverExporting"
+                :disabled="coverExporting || coverLoading"
                 :class="{ 'is-loading': coverExporting && coverExportFormat === 'docx' }"
                 @click="downloadCover('docx')"
               >
@@ -221,7 +221,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  evaluateApplication, tailorApplication, coverLetterApplication,
+  evaluateApplication, tailorApplication, streamCoverLetter,
   getGenerationProgress, exportCoverLetterPdf, exportCoverLetterDocx
 } from '@/api/application'
 import { exportResumeDocx, exportResumePdf } from '@/api/jobmatch'
@@ -585,15 +585,31 @@ async function loadCover() {
   const started = performance.now()
   coverLoading.value = true
   startCoverStagePoll(jobId)
+  // 流式期间先挂一个草稿对象，正文逐段追加
+  const draft = { subject: '', greeting: '', body: '', materials: [] }
+  if (props.job?.id === jobId) cover.value = draft
   try {
-    const res = await coverLetterApplication(jobId)
-    const data = res.data || null
-    coverCache.set(jobId, data)
-    if (data) recordGenerationDuration('cover', (performance.now() - started) / 1000)
-    if (props.job?.id === jobId) {
-      cover.value = data
-      if (data) ElMessage.success('求职信已生成')
-    }
+    await streamCoverLetter(jobId, {
+      onDelta: (text) => {
+        if (props.job?.id !== jobId) return
+        draft.body += text
+        cover.value = { ...draft }
+      },
+      onDone: (data) => {
+        coverCache.set(jobId, data)
+        recordGenerationDuration('cover', (performance.now() - started) / 1000)
+        if (props.job?.id === jobId) {
+          cover.value = data
+          ElMessage.success('求职信已生成')
+        }
+      },
+      onError: (message) => {
+        ElMessage.error(message || '求职信生成失败，请稍后重试')
+      }
+    })
+  } catch (e) {
+    ElMessage.error(e?.message || '求职信生成失败，请稍后重试')
+    if (props.job?.id === jobId) cover.value = coverCache.get(jobId) || null
   } finally {
     if (props.job?.id === jobId) {
       coverLoading.value = false

@@ -19,8 +19,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * DeepSeek 文本模型客户端：负责简历与 JD 的语义匹配分析。
@@ -69,6 +74,17 @@ public class DeepSeekClient {
             + "1. body 应包含：开篇表明应聘岗位与来源、核心匹配优势（2-3 点，紧扣 JD）、表达加入意愿与感谢。\n"
             + "2. 语言专业、诚恳、精炼，避免空话套话。\n"
             + "3. 只使用与岗位要求直接相关的经历、技能和成果；与岗位无关的项目、课程、兴趣、证书不要罗列。";
+
+    /** 流式版本只需要纯文本正文，不回 JSON，前端才能逐字渲染 */
+    private static final String COVER_LETTER_STREAM_PROMPT =
+            "你是一名资深求职指导专家，负责为候选人撰写一封针对具体岗位的中文求职信。\n"
+            + "务必实事求是：基于候选人真实简历，突出与岗位要求匹配的关键优势，绝不编造经历、数据或技能。\n"
+            + "直接输出求职信正文：不要输出 JSON、标题、称呼、落款或任何解释性文字，也不要使用 Markdown 标记。\n"
+            + "要求：\n"
+            + "1. 正文分段，每段之间用换行分隔，全文约 200-350 字。\n"
+            + "2. 包含：开篇表明应聘岗位、核心匹配优势（2-3 点，紧扣 JD）、表达加入意愿与感谢。\n"
+            + "3. 语言专业、诚恳、精炼，避免空话套话。\n"
+            + "4. 只使用与岗位要求直接相关的经历、技能和成果。";
 
     private static final String CAREER_PROMPT =
             "你是一名资深职业规划师与招聘专家，负责评估候选人简历与其目标岗位的匹配度，并给出可执行的发展建议。\n" +
@@ -208,17 +224,82 @@ public class DeepSeekClient {
         }
     }
 
+    /** 求职信流式生成：逐段回调正文，返回完整文本（不包 JSON，便于前端逐字渲染）。 */
+    public String writeCoverLetterStream(String resumeSummary, String jobName, String companyName,
+                                         String jobRequirement, Consumer<String> onDelta) {
+        if (!StringUtils.hasText(apiKey)) {
+            throw new BusinessException("未配置 DeepSeek API Key，请设置环境变量 DEEPSEEK_API_KEY");
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("model", model);
+        body.put("temperature", 0.4);
+        body.put("stream", true);
+        body.put("messages", List.of(
+                Map.of("role", "system", "content", COVER_LETTER_STREAM_PROMPT),
+                Map.of("role", "user", "content", coverLetterUserPrompt(resumeSummary, jobName, companyName, jobRequirement))
+        ));
+
+        StringBuilder full = new StringBuilder();
+        try {
+            String url = baseUrl + "/chat/completions";
+            restTemplate.execute(url, HttpMethod.POST,
+                    request -> {
+                        request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                        request.getHeaders().setBearerAuth(apiKey);
+                        objectMapper.writeValue(request.getBody(), body);
+                    },
+                    response -> {
+                        try (BufferedReader reader = new BufferedReader(
+                                new InputStreamReader(response.getBody(), StandardCharsets.UTF_8))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                if (!line.startsWith("data:")) {
+                                    continue;
+                                }
+                                String data = line.substring(5).trim();
+                                if ("[DONE]".equals(data)) {
+                                    break;
+                                }
+                                JsonNode delta = objectMapper.readTree(data)
+                                        .path("choices").path(0).path("delta").path("content");
+                                if (delta.isMissingNode() || delta.isNull()) {
+                                    continue;
+                                }
+                                String chunk = delta.asText();
+                                if (StringUtils.hasText(chunk)) {
+                                    full.append(chunk);
+                                    if (onDelta != null) {
+                                        onDelta.accept(chunk);
+                                    }
+                                }
+                            }
+                        }
+                        return null;
+                    });
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("DeepSeek 流式生成失败", e);
+            throw new BusinessException("求职信生成失败，请稍后重试");
+        }
+        return AiSafetyGuard.sanitizeOutput(full.toString());
+    }
+
+    private String coverLetterUserPrompt(String resumeSummary, String jobName, String companyName, String jobRequirement) {
+        return "【目标岗位】\n" + (jobName == null ? "" : jobName)
+                + "\n【目标公司】\n" + (companyName == null ? "" : companyName)
+                + "\n\n【岗位要求】\n" + AiSafetyGuard.wrapUntrusted(jobRequirement)
+                + "\n\n【候选人简历】\n" + resumeSummary
+                + "\n\n请只使用与岗位要求相关的简历内容，无关内容不要写入。";
+    }
+
     /** 针对目标岗位撰写中文求职信，返回 JSON 字符串。 */
     public String writeCoverLetter(String resumeSummary, String jobName, String companyName, String jobRequirement) {
         if (!StringUtils.hasText(apiKey)) {
             throw new BusinessException("未配置 DeepSeek API Key，请设置环境变量 DEEPSEEK_API_KEY");
         }
-        String userPrompt = "【目标岗位】\n" + (jobName == null ? "" : jobName)
-                + "\n【目标公司】\n" + (companyName == null ? "" : companyName)
-                + "\n\n【岗位要求】\n" + AiSafetyGuard.wrapUntrusted(jobRequirement)
-                + "\n\n【候选人简历】\n" + resumeSummary
-                + "\n\n请只使用与岗位要求相关的简历内容，无关内容不要写入。";
-        return chatJson(COVER_LETTER_PROMPT, userPrompt, 0.4);
+        return chatJson(COVER_LETTER_PROMPT,
+                coverLetterUserPrompt(resumeSummary, jobName, companyName, jobRequirement), 0.4);
     }
 
     private String chatJson(String systemPrompt, String userPrompt, double temperature) {
