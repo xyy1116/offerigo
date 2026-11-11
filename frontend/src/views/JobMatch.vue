@@ -102,7 +102,9 @@
         <div v-else-if="analyzing && !jobList.length" class="analyzing"><span class="spin"></span><span>匹配分析中…</span></div>
         <div v-else-if="!displayedJobs.length" class="empty-tip empty-tip--action">
           <div v-if="!jobList.length" class="start-guide">
-            <h3 class="start-guide-title">三步开始你的岗位匹配</h3>
+            <h3 class="start-guide-title">
+              {{ knowledgeList.length ? '三步开始你的岗位匹配' : '先补充简历素材，再看每日推荐' }}
+            </h3>
             <ol class="start-guide-steps">
               <li>
                 <span class="start-guide-num">1</span>
@@ -143,6 +145,10 @@
             <span class="analyze-banner-meta">{{ analyzePercent }}% · {{ analyzeTimeText }}</span>
           </div>
           <div class="analyze-banner-track"><span class="analyze-banner-fill" :style="{ width: analyzePercent + '%' }"></span></div>
+        </div>
+        <div v-if="!initialLoading && !knowledgeList.length && displayedJobs.length" class="material-hint" role="status">
+          <span>你的简历素材还是空的，下面的匹配度会一直是 0</span>
+          <button class="button button--small button--plain" @click="openSidebarFocus('free')">去补充素材</button>
         </div>
         <div v-if="recommendStale" class="analyze-banner" role="status" aria-live="polite">
           <div class="analyze-banner-head">
@@ -1494,6 +1500,8 @@ const mergedJobs = computed(() =>
 
 // 今日推荐岗位：用与目标岗位相同的引擎、按当前素材重算，保证榜单内分数可直接比较
 const recommendJobEntries = computed(() => {
+  // 素材为空时匹配度恒为 0，推荐没有参考价值：不展示列表，交给空状态引导补素材
+  if (!knowledgeList.value.length) return []
   const list = (recommendJobs.value || []).map((rec) => {
   const job = {
     id: `rec-${rec.id}`,
@@ -4529,6 +4537,21 @@ async function exportResumeWord() {
   background: var(--color-accent-soft);
   color: var(--color-accent);
   font-size: 13px;
+}
+
+/* 空素材提示：素材为空时匹配度恒为 0，先引导用户补素材 */
+.material-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-muted);
+  color: var(--color-text-2);
+  font-size: 12px;
 }
 .analyze-banner-head {
   display: flex;

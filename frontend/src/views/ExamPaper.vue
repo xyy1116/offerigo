@@ -312,8 +312,15 @@ const typeSummary = computed(() => {
 })
 
 onMounted(async () => {
-  const res = await getExamPaper(route.params.id)
-  paper.value = res.data
+  try {
+    const res = await getExamPaper(route.params.id)
+    paper.value = res.data
+  } catch (e) {
+    // 试卷不存在或接口异常：给出提示并退回列表，避免整页空白
+    ElMessage.error(e?.message || '试卷加载失败，请返回重试')
+    router.replace('/exam')
+    return
+  }
   answers.value = (paper.value.questions || []).map((q) => ({
     answer: '',
     multi: [],

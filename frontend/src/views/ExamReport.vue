@@ -83,6 +83,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import hljs from 'highlight.js/lib/common'
 import 'highlight.js/styles/github.css'
 import { getExamReport } from '@/api/exam'
@@ -95,8 +96,14 @@ const linkage = useLinkageStore()
 const report = ref(null)
 
 onMounted(async () => {
-  const res = await getExamReport(route.params.id)
-  report.value = res.data
+  try {
+    const res = await getExamReport(route.params.id)
+    report.value = res.data
+  } catch (e) {
+    // 报告不存在或接口异常：给出提示并退回列表，避免整页空白
+    ElMessage.error(e?.message || '报告加载失败，请返回重试')
+    router.replace('/exam')
+  }
 })
 
 // 模块四 → 模块三联动：一键开启该岗位 AI 面试
