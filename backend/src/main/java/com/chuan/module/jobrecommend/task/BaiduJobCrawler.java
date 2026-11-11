@@ -17,19 +17,17 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 网易招聘爬虫：官方公开接口返回岗位列表，含职责、要求与工作地点。
+ * 百度招聘爬虫：官方公开接口返回岗位列表，含工作职责与任职要求。
+ * 详情页路由为 /jobs/detail/:type/:id，type 取 SOCIAL（社招）。
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class NeteaseJobCrawler {
+public class BaiduJobCrawler {
 
-    private static final String API = "https://hr.163.com/api/hr163/position/queryPage";
-    /**
-     * 网易详情页走前端路由且未公开，任何按 id 拼的深链都会落到 404，
-     * 因此统一跳到官方招聘首页，用户可按岗位名再搜。
-     */
-    private static final String HOMEPAGE = "https://hr.163.com/";
+    private static final String API = "https://talent.baidu.com/httservice/getPostListNew";
+    private static final String DETAIL = "https://talent.baidu.com/jobs/detail/SOCIAL/";
+    private static final String REFERER = "https://talent.baidu.com/jobs/social-list";
     private static final String USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
@@ -42,16 +40,16 @@ public class NeteaseJobCrawler {
             return out;
         }
         try {
-            Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("currentPage", 1);
-            payload.put("pageSize", 20);
-            payload.put("keyword", keyword);
+            Map<String, String> form = new LinkedHashMap<>();
+            form.put("recruitType", "SOCIAL");
+            form.put("pageSize", "20");
+            form.put("keyWord", keyword);
+            form.put("curPage", "1");
             String body = Jsoup.connect(API)
                     .userAgent(USER_AGENT)
-                    .header("Content-Type", "application/json")
+                    .header("Referer", REFERER)
                     .header("Accept", "application/json, text/plain, */*")
-                    .header("Referer", "https://hr.163.com/")
-                    .requestBody(objectMapper.writeValueAsString(payload))
+                    .data(form)
                     .method(Connection.Method.POST)
                     .ignoreContentType(true)
                     .ignoreHttpErrors(true)
@@ -64,45 +62,32 @@ public class NeteaseJobCrawler {
                 if (out.size() >= limit) {
                     break;
                 }
-                String id = node.path("id").asText("");
+                String postId = node.path("postId").asText("");
                 String title = node.path("name").asText("");
-                if (!StringUtils.hasText(id) || !StringUtils.hasText(title) || !seen.add(id)) {
+                if (!StringUtils.hasText(postId) || !StringUtils.hasText(title) || !seen.add(postId)) {
                     continue;
                 }
-                String location = topPlaces(node.path("workPlaceNameList"));
-                String requirement = (node.path("description").asText("")
-                        + "\n" + node.path("requirement").asText("")).trim();
+                String requirement = (node.path("workContent").asText("")
+                        + "\n" + node.path("serviceCondition").asText("")).trim();
                 if (!StringUtils.hasText(requirement)) {
                     requirement = title;
                 }
+                String location = node.path("workPlace").asText("");
                 CrawlCandidate candidate = new CrawlCandidate();
                 candidate.setJobName(cut(title, 250));
-                candidate.setCompanyName("网易");
+                candidate.setCompanyName("百度");
                 candidate.setLocation(cut(location, 250));
                 candidate.setSalary("面议");
                 candidate.setRequirement(cut(requirement, 6000));
-                // 带 jobId 参数保证每个岗位 URL 唯一（入库按 URL 去重），打开后落在官网首页
-                candidate.setSourceUrl(HOMEPAGE + "?jobId=" + id);
-                candidate.setEmbedText(cut(title + "\n网易\n" + location + "\n" + requirement, 4000));
+                candidate.setSourceUrl(DETAIL + postId);
+                candidate.setEmbedText(cut(title + "\n百度\n" + location + "\n" + requirement, 4000));
                 out.add(candidate);
             }
-            log.info("网易招聘搜索完成，keyword={}, candidates={}", keyword, out.size());
+            log.info("百度招聘搜索完成，keyword={}, candidates={}", keyword, out.size());
         } catch (Exception e) {
-            log.warn("网易招聘搜索失败，keyword={}: {}", keyword, e.getMessage());
+            log.warn("百度招聘搜索失败，keyword={}: {}", keyword, e.getMessage());
         }
         return out;
-    }
-
-    /** 工作地点列表用顿号连接，最多取 3 个 */
-    private String topPlaces(JsonNode places) {
-        List<String> names = new ArrayList<>();
-        for (JsonNode place : places) {
-            String name = place.isTextual() ? place.asText("") : place.path("name").asText("");
-            if (StringUtils.hasText(name) && names.size() < 3) {
-                names.add(name);
-            }
-        }
-        return String.join("、", names);
     }
 
     private String cut(String value, int max) {
@@ -112,5 +97,4 @@ public class NeteaseJobCrawler {
         String text = value.trim();
         return text.length() <= max ? text : text.substring(0, max);
     }
-
 }

@@ -55,7 +55,7 @@ public class JobCrawlTask {
     private final CrawlJobMapper crawlJobMapper;
     private final UserResumeMapper userResumeMapper;
     private final EmbeddingClient embeddingClient;
-    private final NeteaseJobCrawler neteaseJobCrawler;
+    private final BaiduJobCrawler baiduJobCrawler;
     private final TencentJobCrawler tencentJobCrawler;
     private final MeituanJobCrawler meituanJobCrawler;
     private final ResumeSkillService resumeSkillService;
@@ -168,7 +168,7 @@ public class JobCrawlTask {
             List<CrawlCandidate> pending = new ArrayList<>();
             pending.addAll(crawlSource("腾讯招聘", words, perSource, seen, existing, tencentJobCrawler::search));
             pending.addAll(crawlSource("美团招聘", words, perSource, seen, existing, meituanJobCrawler::search));
-            pending.addAll(crawlSource("网易招聘", words, perSource, seen, existing, neteaseJobCrawler::search));
+            pending.addAll(crawlSource("百度招聘", words, perSource, seen, existing, baiduJobCrawler::search));
             int saved = save(pending, today);
             repairShortTargets();
             repairShortCrawlJobs();

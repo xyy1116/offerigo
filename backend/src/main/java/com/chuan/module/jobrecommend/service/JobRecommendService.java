@@ -441,8 +441,8 @@ public class JobRecommendService {
             if (lower.contains("meituan.com")) {
                 return "美团招聘";
             }
-            if (lower.contains("163.com")) {
-                return "网易招聘";
+            if (lower.contains("talent.baidu.com")) {
+                return "百度招聘";
             }
             if (lower.contains("jobs.bytedance.com")) {
                 return "字节跳动";
