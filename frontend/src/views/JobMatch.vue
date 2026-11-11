@@ -2059,27 +2059,31 @@ const matchHighlightsIndex = computed(() => {
   for (const e of knowledgeList.value || []) entriesById[e.id] = e
   for (const job of [...(mergedJobs.value || []), ...(recommendJobEntries.value || [])]) {
     const details = (job.match && Array.isArray(job.match.details)) ? job.match.details : []
-    const seen = new Set()
-    const highlights = []
+    // 同一份素材可能命中多条要求：只保留分数权重最高的那条，避免 Top 里出现一堆低价值匹配
+    const best = new Map()
     for (const d of details) {
       if (d.matched === false) continue
+      const quota = Number(d.quota) || 0
       for (const id of (d.evidenceIds || [])) {
-        if (id == null || seen.has(id)) continue
+        if (id == null) continue
         const entry = entriesById[id]
         if (!entry) continue
-        seen.add(id)
-        highlights.push({
-          knowledgeId: id,
-          id,
-          type: entry.type || '其他',
-          source: entry.type || '素材',
-          text: entry.content || '',
-          requirement: d.requirement || '',
-          quota: d.quota || 0,
-        })
+        const current = best.get(id)
+        if (!current || quota > current.quota) {
+          best.set(id, {
+            knowledgeId: id,
+            id,
+            type: entry.type || '其他',
+            source: entry.type || '素材',
+            text: entry.content || '',
+            requirement: d.requirement || '',
+            quota,
+          })
+        }
       }
     }
-    map[job.id] = highlights
+    // 按该条要求的分值排序，分值越高说明对总分贡献越大，优先展示
+    map[job.id] = [...best.values()].sort((a, b) => b.quota - a.quota)
   }
   return map
 })
@@ -2124,6 +2128,9 @@ function matchDetailRows(job) {
 
 function matchAdvantages(job) {
   const rows = matchDetailRows(job).filter((d) => d && d.matched)
+    // 按分值从高到低：分值高的要求对总分贡献大，先展示
+    .slice()
+    .sort((a, b) => (Number(b.quota) || 0) - (Number(a.quota) || 0))
   const items = rows
     .map((d) => ({
       requirement: String(d.requirement || '').trim(),
