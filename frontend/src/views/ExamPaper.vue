@@ -320,9 +320,9 @@ const typeSummary = computed(() => {
 
 onMounted(async () => {
   const languagesReady = loadCodeLanguages()
+  let res
   try {
-    const res = await getExamPaper(route.params.id)
-    paper.value = res.data
+    res = await getExamPaper(route.params.id)
   } catch (e) {
     // 试卷不存在或接口异常：给出提示并退回列表，避免整页空白
     ElMessage.error(e?.message || '试卷加载失败，请返回重试')
@@ -330,6 +330,8 @@ onMounted(async () => {
     return
   }
   await languagesReady
+  // paper 与 answers 必须一次性赋值：中间只要渲染一次，answers[qi] 还是空的会直接报错
+  paper.value = res.data
   codeLanguage.value = resolveCodeLanguage()
   answers.value = (paper.value.questions || []).map((q) => ({
     answer: '',
