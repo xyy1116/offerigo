@@ -491,22 +491,46 @@ function resolveCodeLanguage() {
   return supported.includes('java') ? 'java' : supported[0] || 'javascript'
 }
 
+/** 语言特征词：按「知识点 > 来源 > 题干」的权重打分，得分最高的语言胜出 */
+const LANGUAGE_PATTERNS = [
+  { value: 'javascript', source: '前端|vue|react|javascript|\\bjs\\b|\\bweb\\b|浏览器|node|小程序|html|css' },
+  { value: 'python', source: 'python|django|flask|pandas|numpy|爬虫' },
+  { value: 'java', source: 'java|spring|jvm|mybatis' },
+  { value: 'cpp', source: 'c\\+\\+|cpp|stl' },
+  { value: 'c', source: 'c语言' }
+]
+
 /**
  * 单题的编程语言：优先看题目自己的标签（知识点 / 来源 / 题干），
  * 避免「AI 全栈」这类技术栈很杂的岗位，把前端题也标成 Python。
+ * 完全没有线索时才回退到整卷语言。
  */
 function resolveQuestionLanguage(q) {
-  const hint = [q.knowledgePoint, q.sourceName, q.sourceCompany, q.stem]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
   const supported = codeLanguages.value.map((l) => l.value)
-  const prefer = (value) => (supported.includes(value) ? value : '')
-  if (/前端|vue|react|javascript|\bweb\b|浏览器/.test(hint)) return prefer('javascript') || codeLanguage.value
-  if (/python/.test(hint)) return prefer('python') || codeLanguage.value
-  if (/c\+\+|cpp/.test(hint)) return prefer('cpp') || codeLanguage.value
-  if (/java/.test(hint)) return prefer('java') || codeLanguage.value
-  return codeLanguage.value
+  const fields = [
+    [String(q.knowledgePoint || ''), 3],
+    [`${q.sourceName || ''} ${q.sourceCompany || ''}`, 2],
+    [String(q.stem || ''), 1]
+  ]
+  const scores = {}
+  for (const [text, weight] of fields) {
+    const lower = text.toLowerCase()
+    if (!lower) continue
+    for (const rule of LANGUAGE_PATTERNS) {
+      if (!supported.includes(rule.value)) continue
+      const hits = lower.match(new RegExp(rule.source, 'g'))
+      if (hits) scores[rule.value] = (scores[rule.value] || 0) + hits.length * weight
+    }
+  }
+  let best = ''
+  let bestScore = 0
+  for (const [value, score] of Object.entries(scores)) {
+    if (score > bestScore) {
+      best = value
+      bestScore = score
+    }
+  }
+  return best || codeLanguage.value
 }
 
 function languageLabel(value) {
