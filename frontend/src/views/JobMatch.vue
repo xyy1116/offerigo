@@ -2130,7 +2130,15 @@ const HIGHLIGHT_LABELS = new Set(['职位要求', '岗位要求', '岗位职责'
 
 function matchDetailRows(job) {
   const rows = job && job.match && job.match.details
-  return Array.isArray(rows) ? rows : []
+  if (!Array.isArray(rows)) return []
+  // 历史缓存里的结果可能含「【工作职责】」这类章节标题，展示层再兜一次
+  return rows.filter((d) => d && !isSectionHeading(d.requirement))
+}
+
+const SECTION_HEADING_RE = /^[【[（(]?\s*(工作职责|岗位职责|工作内容|职位描述|职位要求|岗位要求|任职要求|任职资格|技能要求|专业要求|加分项|补充信息|岗位亮点|我们提供|团队介绍|职位详情)\s*[】\]）)]?\s*[:：]?\s*$/
+
+function isSectionHeading(text) {
+  return SECTION_HEADING_RE.test(String(text || '').trim())
 }
 
 function matchAdvantages(job) {
@@ -2154,9 +2162,12 @@ function matchAdvantages(job) {
 }
 
 function matchTotalCount(job) {
+  // 有明细时以过滤后的条数为准，避免把章节标题算进分母
+  const rows = matchDetailRows(job)
+  if (rows.length) return rows.length
   const total = Number(job && job.match && job.match.catalogSize)
   if (Number.isFinite(total) && total > 0) return total
-  return matchDetailRows(job).length
+  return 0
 }
 
 function matchCoveredCount(job) {
@@ -2760,6 +2771,9 @@ function pickCheer() { return CHEER_TEMPLATES[Math.floor(Math.random() * CHEER_T
 // —— 排名结果本地持久化（按登录 token 隔离，刷新/跨页返回秒开历史结果）——
 const rankCacheKey = () => 'jobmatch_rank_cache_' + (getToken() || 'anon')
 
+/** 匹配规则变更后调高该版本号，让旧的本地评估结果失效并重算 */
+const RANK_CACHE_VERSION = 3
+
 function clearRankCache() {
   try {
     localStorage.removeItem(rankCacheKey())
@@ -2775,6 +2789,7 @@ function saveRankCache() {
   _rankCacheDebounce = setTimeout(() => {
     try {
       localStorage.setItem(rankCacheKey(), JSON.stringify({
+        v: RANK_CACHE_VERSION,
         results: rankList.value,
         savedAt: Date.now()
       }))
@@ -2789,6 +2804,11 @@ function loadRankCache() {
     const raw = localStorage.getItem(rankCacheKey())
     if (!raw) return false
     const data = JSON.parse(raw)
+    // 版本不符说明匹配规则变过，旧结果作废，重新评估
+    if (data && data.v !== RANK_CACHE_VERSION) {
+      clearRankCache()
+      return false
+    }
     if (data && Array.isArray(data.results) && data.results.length) {
       _replaceRankList(data.results) // results 已经是 normalize 后，_replaceRankList 会再次 normalize（幂等）
       return true
