@@ -1526,10 +1526,60 @@ const recommendJobEntries = computed(() => {
   }
   return { ...job, match }
   })
-  // 后端给的是候选池，这里按本地引擎的真实匹配度排序，只展示最高的 10 条
+  // 后端给的是候选池，这里按本地引擎的真实匹配度排序
   list.sort((a, b) => (b.match?.score || 0) - (a.match?.score || 0))
-  return list.slice(0, 10)
+  return pickDailyTop(list)
 })
+
+/**
+ * 当天展示的 10 条推荐固定不变：首次算完就按「日期 + 版本」记住这 10 个岗位 id，
+ * 之后素材怎么变都只刷新它们的分数与待补足项，不换人；次日 8 点数据换版后重新挑。
+ */
+const RECOMMEND_DAILY_LIMIT = 10
+const DAILY_TOP_PREFIX = 'jobmatch_daily_top10_'
+
+function dailyTopKey() {
+  const v = recommendVersion.value
+  if (!v || !v.version) return ''
+  return `${DAILY_TOP_PREFIX}${v.date || ''}_${v.version}_${(recommendJobs.value || []).length}`
+}
+
+function readDailyTop(key) {
+  if (!key) return []
+  try {
+    const raw = JSON.parse(localStorage.getItem(key) || '[]')
+    return Array.isArray(raw) ? raw : []
+  } catch {
+    return []
+  }
+}
+
+function writeDailyTop(key, ids) {
+  if (!key) return
+  try {
+    localStorage.setItem(key, JSON.stringify(ids))
+    // 顺手清掉往日的键，避免越积越多
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith(DAILY_TOP_PREFIX) && k !== key) localStorage.removeItem(k)
+    }
+  } catch {
+    // 隐私模式下写不进去就退化为每次重排
+  }
+}
+
+function pickDailyTop(sorted) {
+  const key = dailyTopKey()
+  const byId = new Map(sorted.map((j) => [j.recommendId, j]))
+  const stored = readDailyTop(key).filter((id) => byId.has(id))
+  if (stored.length >= Math.min(RECOMMEND_DAILY_LIMIT, sorted.length)) {
+    return stored.map((id) => byId.get(id))
+  }
+  // 首次进入本日（或数据量变了）：按当前匹配度挑满 10 个并记下来
+  const ids = sorted.slice(0, RECOMMEND_DAILY_LIMIT).map((j) => j.recommendId)
+  writeDailyTop(key, ids)
+  return ids.map((id) => byId.get(id)).filter(Boolean)
+}
 
 function recommendLinkKey(job) {
   return String((job && (job.jobLink || job.sourceUrl)) || '').trim().replace(/\/+$/, '').toLowerCase()
