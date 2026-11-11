@@ -112,6 +112,43 @@ class CodeSandboxServiceTest {
         assertEquals(1, result.getPassed());
     }
 
+    @Test
+    void exposesSupportedLanguages() {
+        var languages = sandbox.availableLanguages();
+        var values = languages.stream().map(m -> m.get("value")).toList();
+        assertTrue(values.contains("java"));
+        assertTrue(values.contains("javascript"));
+        assertTrue(values.contains("python"));
+        assertTrue(values.contains("c"));
+        assertTrue(values.contains("cpp"));
+        // 未配置的语言直接判为不支持
+        assertFalse(sandbox.supports("golang"));
+    }
+
+    @Test
+    void runsPythonWhenToolchainPresent() {
+        org.junit.jupiter.api.Assumptions.assumeTrue(toolExists("python3"), "本机未安装 python3，跳过");
+        String code = "a = int(input())\nprint(a * 2)";
+        CodeRunResultVO result = sandbox.run("python", code, List.of(testCase("21", "42")));
+        assertTrue(result.getSupported());
+        assertEquals(1, result.getPassed());
+    }
+
+    @Test
+    void blocksDangerousPythonImports() {
+        CodeRunResultVO result = sandbox.run("python", "import os\nos.system('id')", List.of(testCase("", "")));
+        assertFalse(result.getSupported());
+        assertTrue(result.getMessage().contains("不允许"));
+    }
+
+    private boolean toolExists(String command) {
+        try {
+            return new ProcessBuilder(command, "--version").start().waitFor() == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private CodeTestCaseVO testCase(String input, String expected) {
         CodeTestCaseVO testCase = new CodeTestCaseVO();
         testCase.setInput(input);

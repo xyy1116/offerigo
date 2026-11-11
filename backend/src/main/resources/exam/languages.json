@@ -1,0 +1,37 @@
+{
+  "java": {
+    "label": "Java",
+    "family": "java",
+    "file": "Main.java",
+    "compile": ["javac", "-encoding", "UTF-8", "-d", "{dir}", "{file}"],
+    "run": ["java", "-Xmx128m", "-Xss1m", "-XX:ActiveProcessorCount=1", "-Dfile.encoding=UTF-8", "-cp", "{dir}", "Main"]
+  },
+  "javascript": {
+    "label": "JavaScript",
+    "family": "javascript",
+    "file": "main.js",
+    "compile": [],
+    "run": ["node", "--permission", "--no-warnings", "--max-old-space-size=128", "--allow-fs-read={dir}", "--allow-fs-write={dir}", "{file}"]
+  },
+  "python": {
+    "label": "Python 3",
+    "family": "python",
+    "file": "main.py",
+    "compile": [],
+    "run": ["python3", "-I", "-B", "{file}"]
+  },
+  "c": {
+    "label": "C",
+    "family": "c",
+    "file": "main.c",
+    "compile": ["gcc", "-O2", "-pipe", "-o", "{dir}/main", "{file}"],
+    "run": ["{dir}/main"]
+  },
+  "cpp": {
+    "label": "C++",
+    "family": "c",
+    "file": "main.cpp",
+    "compile": ["g++", "-std=c++17", "-O2", "-pipe", "-o", "{dir}/main", "{file}"],
+    "run": ["{dir}/main"]
+  }
+}

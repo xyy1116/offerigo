@@ -7,6 +7,7 @@ import com.chuan.module.exam.dto.GenerateRequest;
 import com.chuan.module.exam.dto.RedoWrongRequest;
 import com.chuan.module.exam.dto.RunCodeRequest;
 import com.chuan.module.exam.dto.SubmitAnswerRequest;
+import com.chuan.module.exam.service.CodeSandboxService;
 import com.chuan.module.exam.service.ExamQuestionBankService;
 import com.chuan.module.exam.service.ExamIndustrySupport;
 import com.chuan.module.exam.service.ExamService;
@@ -52,6 +53,13 @@ public class ExamController {
     private final ExamQuestionCrawler questionCrawler;
     private final GenerationProgressStore progressStore;
     private final ExamIndustrySupport industrySupport;
+    private final CodeSandboxService codeSandboxService;
+
+    /** 可运行语言清单：前端语言下拉用，新增语言只需改 languages.json */
+    @GetMapping("/code/languages")
+    public Result<java.util.List<java.util.Map<String, String>>> codeLanguages() {
+        return Result.success(codeSandboxService.availableLanguages());
+    }
 
     @GetMapping("/bank/status")
     public Result<BankStatusVO> bankStatus() {

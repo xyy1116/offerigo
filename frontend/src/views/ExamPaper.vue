@@ -66,14 +66,9 @@
           :rows="4" placeholder="请输入你的答案" />
         <div v-else class="coding-block">
           <div class="coding-toolbar">
-            <el-select v-model="answers[qi].language" size="small" class="code-lang">
-              <el-option label="JavaScript" value="javascript" />
-              <el-option label="Java" value="java" />
-            </el-select>
+            <el-tag size="small" type="info" class="code-lang">{{ languageLabel(codeLanguage) }}</el-tag>
             <span class="coding-hint">
-              {{ answers[qi].language === 'java'
-                ? '编写 public class Main，从标准输入读取，向标准输出打印'
-                : '使用 process.stdin 读取标准输入，用 console.log 输出' }}
+              {{ codingHints[codeLanguage] || '从标准输入读取，向标准输出打印' }}
             </span>
             <div class="editor-actions">
               <button
@@ -259,7 +254,7 @@ import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import { Back } from '@element-plus/icons-vue'
 import { Play, Bug } from 'lucide-vue-next'
-import { getExamPaper, submitExam, runExamCode, getExamGradeProgress } from '@/api/exam'
+import { getExamPaper, submitExam, runExamCode, getExamGradeProgress, getCodeLanguages } from '@/api/exam'
 import GenerationProgress from '@/components/GenerationProgress.vue'
 import CodeEditor from '@/components/CodeEditor.vue'
 import { recordGenerationDuration } from '@/utils/generationTiming'
@@ -269,6 +264,18 @@ const router = useRouter()
 
 const paper = ref(null)
 const answers = ref([])
+/** 可选语言：以后端 languages.json 为准，取不到时退回默认两项 */
+const codeLanguages = ref([
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'java', label: 'Java' }
+])
+const codingHints = {
+  java: '编写 public class Main，从标准输入读取，向标准输出打印',
+  javascript: '使用 process.stdin 读取标准输入，用 console.log 输出',
+  python: '使用 input() 读取标准输入，用 print() 输出',
+  c: '编写 main 函数，用 scanf/printf 读写标准输入输出',
+  cpp: '编写 main 函数，用 cin/cout 读写标准输入输出'
+}
 const submitting = ref(false)
 const remaining = ref(0)
 let timer = null
@@ -312,6 +319,7 @@ const typeSummary = computed(() => {
 })
 
 onMounted(async () => {
+  const languagesReady = loadCodeLanguages()
   try {
     const res = await getExamPaper(route.params.id)
     paper.value = res.data
@@ -321,10 +329,12 @@ onMounted(async () => {
     router.replace('/exam')
     return
   }
+  await languagesReady
+  codeLanguage.value = resolveCodeLanguage()
   answers.value = (paper.value.questions || []).map((q) => ({
     answer: '',
     multi: [],
-    language: defaultLanguage(),
+    language: codeLanguage.value,
     running: false,
     runResult: null,
     debugRunning: false,
@@ -447,12 +457,40 @@ function prettyUrl(url) {
   }
 }
 
-function defaultLanguage() {
-  const tech = String(paper.value?.techStack || '').toLowerCase()
-  if (tech.includes('java') && !tech.includes('javascript') && !tech.includes('vue') && !tech.includes('react')) {
-    return 'java'
+async function loadCodeLanguages() {
+  try {
+    const res = await getCodeLanguages()
+    const list = res.data || []
+    if (Array.isArray(list) && list.length) codeLanguages.value = list
+  } catch {
+    // 取不到就沿用默认两项，不影响作答
   }
-  return 'javascript'
+}
+
+/** 本卷编程语言：由岗位技术栈决定，学生不能自选 */
+const codeLanguage = ref('javascript')
+
+/** 技术栈 → 运行语言；岗位语言不在支持列表时退回 Java */
+function resolveCodeLanguage() {
+  const tech = String(paper.value?.techStack || '').toLowerCase()
+  const title = String(paper.value?.jobTitle || paper.value?.position || '').toLowerCase()
+  const text = tech + ' ' + title
+  const supported = codeLanguages.value.map((l) => l.value)
+  let preferred = ''
+  if (text.includes('python')) preferred = 'python'
+  else if (text.includes('c++') || text.includes('cpp')) preferred = 'cpp'
+  else if (text.includes('c语言') || /(^|[^a-z+])c([^a-z+]|$)/.test(text)) preferred = 'c'
+  else if (text.includes('java') && !text.includes('javascript')) preferred = 'java'
+  else if (text.includes('javascript') || text.includes('js') || text.includes('vue') || text.includes('react')) {
+    preferred = 'javascript'
+  }
+  if (preferred && supported.includes(preferred)) return preferred
+  return supported.includes('java') ? 'java' : supported[0] || 'javascript'
+}
+
+function languageLabel(value) {
+  const hit = codeLanguages.value.find((l) => l.value === value)
+  return hit ? hit.label : value
 }
 
 async function runCode(qi) {

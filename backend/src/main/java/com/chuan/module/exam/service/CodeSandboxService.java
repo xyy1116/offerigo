@@ -1,5 +1,6 @@
 package com.chuan.module.exam.service;
 
+import com.chuan.module.exam.dto.CodeLanguageSpec;
 import com.chuan.module.exam.vo.CodeRunResultVO;
 import com.chuan.module.exam.vo.CodeTestCaseVO;
 import lombok.extern.slf4j.Slf4j;
@@ -50,8 +51,95 @@ public class CodeSandboxService {
         if (!enabled) {
             return false;
         }
-        String lang = normalizeLanguage(language);
-        return "java".equals(lang) || "javascript".equals(lang);
+        return languages.containsKey(normalizeLanguage(language));
+    }
+
+    /**
+     * 由岗位名称与技术栈推断本卷的编程语言。
+     * 命中常见语言返回规范化名称；冷门语言返回空串，调用方据此不出编程题。
+     */
+    public String resolveLanguage(String jobTitle, String techStack) {
+        String text = ((jobTitle == null ? "" : jobTitle) + " " + (techStack == null ? "" : techStack))
+                .toLowerCase(Locale.ROOT);
+        if (text.isBlank()) {
+            return "";
+        }
+        if (text.contains("python")) {
+            return "python";
+        }
+        if (text.contains("c++") || text.contains("cpp")) {
+            return "cpp";
+        }
+        if (text.contains("java") && !text.contains("javascript")) {
+            return "java";
+        }
+        if (text.contains("javascript") || text.contains("vue") || text.contains("react")
+                || text.contains("node.js") || text.contains("nodejs")) {
+            return "javascript";
+        }
+        if (text.contains("c语言") || text.matches("(?s).*\\bc\\b.*")) {
+            return "c";
+        }
+        return "";
+    }
+
+    /** 可运行语言清单（供前端下拉使用） */
+    public List<Map<String, String>> availableLanguages() {
+        List<Map<String, String>> list = new ArrayList<>();
+        languages.forEach((value, spec) -> {
+            Map<String, String> item = new java.util.LinkedHashMap<>();
+            item.put("value", value);
+            item.put("label", spec.getLabel() == null ? value : spec.getLabel());
+            list.add(item);
+        });
+        return list;
+    }
+
+    /** 语言清单来自 resources/exam/languages.json，新增语言只需加配置并安装工具链 */
+    private final Map<String, CodeLanguageSpec> languages = loadLanguages();
+
+    private static Map<String, CodeLanguageSpec> loadLanguages() {
+        try (InputStream in = CodeSandboxService.class.getResourceAsStream("/exam/languages.json")) {
+            if (in == null) {
+                return builtinLanguages();
+            }
+            Map<String, CodeLanguageSpec> loaded = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(in, new com.fasterxml.jackson.core.type.TypeReference<Map<String, CodeLanguageSpec>>() {
+                    });
+            return loaded == null || loaded.isEmpty() ? builtinLanguages() : loaded;
+        } catch (Exception e) {
+            log.warn("语言清单加载失败，使用内置默认值：{}", e.getMessage());
+            return builtinLanguages();
+        }
+    }
+
+    private static Map<String, CodeLanguageSpec> builtinLanguages() {
+        Map<String, CodeLanguageSpec> map = new java.util.LinkedHashMap<>();
+        map.put("java", spec("Java", "java", "Main.java",
+                List.of("javac", "-encoding", "UTF-8", "-d", "{dir}", "{file}"),
+                List.of("java", "-Xmx128m", "-Xss1m", "-XX:ActiveProcessorCount=1", "-Dfile.encoding=UTF-8",
+                        "-cp", "{dir}", "Main")));
+        map.put("javascript", spec("JavaScript", "javascript", "main.js", List.of(),
+                List.of("node", "--permission", "--no-warnings", "--max-old-space-size=128",
+                        "--allow-fs-read={dir}", "--allow-fs-write={dir}", "{file}")));
+        map.put("python", spec("Python 3", "python", "main.py", List.of(),
+                List.of("python3", "-I", "-B", "{file}")));
+        map.put("c", spec("C", "c", "main.c",
+                List.of("gcc", "-O2", "-pipe", "-o", "{dir}/main", "{file}"), List.of("{dir}/main")));
+        map.put("cpp", spec("C++", "c", "main.cpp",
+                List.of("g++", "-std=c++17", "-O2", "-pipe", "-o", "{dir}/main", "{file}"), List.of("{dir}/main")));
+        return map;
+    }
+
+    private static CodeLanguageSpec spec(String label, String family, String file,
+                                         List<String> compile, List<String> run) {
+        CodeLanguageSpec spec = new CodeLanguageSpec();
+        spec.setLabel(label);
+        spec.setFamily(family);
+        spec.setFile(file);
+        spec.setCompile(compile);
+        spec.setRun(run);
+        return spec;
     }
 
     /**
@@ -78,6 +166,28 @@ public class CodeSandboxService {
             {"其他运行时", "\\bDeno\\s*\\.|\\bBun\\s*\\."},
     });
 
+    private static final Map<String, Pattern> PYTHON_FORBIDDEN = forbiddenMap(new String[][]{
+            {"系统/进程模块", "^\\s*(import|from)\\s+(os|subprocess|shutil|ctypes|pty|multiprocessing|threading|importlib|pathlib|tempfile|glob|signal)\\b"},
+            {"网络模块", "^\\s*(import|from)\\s+(socket|http|urllib|requests|ftplib|smtplib|telnetlib)\\b"},
+            {"动态导入", "__import__\\s*\\(|importlib"},
+            {"文件操作", "open\\s*\\("},
+            {"进程退出", "sys\\s*\\.\\s*(exit|modules)"},
+    });
+
+    private static final Map<String, Pattern> C_FORBIDDEN = forbiddenMap(new String[][]{
+            {"进程调用", "\\b(system|popen|execl|execlp|execv|execvp|execve|fork|vfork|posix_spawn)\\s*\\("},
+            {"网络调用", "\\b(socket|connect|bind|listen|accept|sendto|recvfrom)\\s*\\("},
+            {"文件操作", "\\b(fopen|freopen|remove|unlink|rename|opendir|open)\\s*\\("},
+            {"头文件", "#include\\s*[<\"](sys/socket|netinet/|arpa/inet|dlfcn|sys/wait|spawn)"},
+    });
+
+    /** 未声明 family 的新语言走通用规则，至少挡住最直接的进程/网络/文件调用 */
+    private static final Map<String, Pattern> GENERIC_FORBIDDEN = forbiddenMap(new String[][]{
+            {"进程调用", "\\b(system|exec|execve|spawn|fork|popen)\\s*\\("},
+            {"网络调用", "\\b(socket|connect|listen|fetch|urllib|requests)\\s*\\("},
+            {"文件操作", "\\b(fopen|open|readfile|writefile|file_get_contents|file_put_contents)\\s*\\("},
+    });
+
     private static Map<String, Pattern> forbiddenMap(String[][] entries) {
         Map<String, Pattern> map = new java.util.LinkedHashMap<>();
         for (String[] entry : entries) {
@@ -87,7 +197,15 @@ public class CodeSandboxService {
     }
 
     private List<String> forbiddenUsages(String lang, String code) {
-        Map<String, Pattern> rules = "java".equals(lang) ? JAVA_FORBIDDEN : JS_FORBIDDEN;
+        CodeLanguageSpec spec = languages.get(lang);
+        String family = spec == null || spec.getFamily() == null ? "generic" : spec.getFamily();
+        Map<String, Pattern> rules = switch (family) {
+            case "java" -> JAVA_FORBIDDEN;
+            case "javascript" -> JS_FORBIDDEN;
+            case "python" -> PYTHON_FORBIDDEN;
+            case "c" -> C_FORBIDDEN;
+            default -> GENERIC_FORBIDDEN;
+        };
         List<String> hits = new ArrayList<>();
         for (Map.Entry<String, Pattern> rule : rules.entrySet()) {
             if (rule.getValue().matcher(code).find()) {
@@ -111,7 +229,7 @@ public class CodeSandboxService {
     public CodeRunResultVO run(String language, String code, List<CodeTestCaseVO> testCases) {
         String lang = normalizeLanguage(language);
         if (!supports(lang)) {
-            return unsupported("暂只支持 JavaScript 和 Java 运行，当前语言：" + language);
+            return unsupported("暂只支持 JavaScript、Java、Python、C、C++ 运行，当前语言：" + language);
         }
         if (code == null || code.isBlank()) {
             return unsupported("请先编写代码");
@@ -160,6 +278,43 @@ public class CodeSandboxService {
         }
     }
 
+    /** 落盘并按配置编译、生成运行命令；编译失败时填充 result 并返回 null。 */
+    private List<String> prepare(String lang, String code, Path dir, CodeRunResultVO result) throws Exception {
+        CodeLanguageSpec spec = languages.get(lang);
+        if (spec == null) {
+            result.setCompiled(false);
+            result.setMessage("暂不支持该语言：" + lang);
+            return null;
+        }
+        Path file = dir.resolve(spec.getFile() == null || spec.getFile().isBlank() ? "main.txt" : spec.getFile());
+        Files.writeString(file, code, StandardCharsets.UTF_8);
+        if (spec.getCompile() != null && !spec.getCompile().isEmpty()) {
+            boolean ok = compile(resolve(spec.getCompile(), file, dir), dir, result);
+            if (!ok) {
+                return null;
+            }
+        }
+        return resolve(spec.getRun(), file, dir);
+    }
+
+    private List<String> resolve(List<String> template, Path file, Path dir) {
+        List<String> out = new ArrayList<>();
+        for (String part : template == null ? List.<String>of() : template) {
+            out.add(part.replace("{file}", file.toString()).replace("{dir}", dir.toString()));
+        }
+        return out;
+    }
+
+    private boolean compile(List<String> command, Path dir, CodeRunResultVO result) throws Exception {
+        ExecResult compile = exec(command, "", compileTimeoutMs, dir);
+        if (compile.exitCode != 0) {
+            result.setCompiled(false);
+            result.setCompileError(trim(compile.stderr + compile.stdout, 4000));
+            return false;
+        }
+        return true;
+    }
+
     private CodeRunResultVO execute(String lang, String code, List<CodeTestCaseVO> cases, Path dir) throws Exception {
         CodeRunResultVO result = new CodeRunResultVO();
         result.setSupported(true);
@@ -168,25 +323,10 @@ public class CodeSandboxService {
         result.setCases(new ArrayList<>());
         long startAll = System.currentTimeMillis();
 
-        List<String> runCommand;
-        if ("java".equals(lang)) {
-            Path file = dir.resolve("Main.java");
-            Files.writeString(file, code, StandardCharsets.UTF_8);
-            ExecResult compile = exec(List.of("javac", "-encoding", "UTF-8", "-d", dir.toString(), file.toString()),
-                    "", compileTimeoutMs, dir);
-            if (compile.exitCode != 0) {
-                result.setCompiled(false);
-                result.setCompileError(trim(compile.stderr + compile.stdout, 4000));
-                result.setTotalMs(System.currentTimeMillis() - startAll);
-                return result;
-            }
-            runCommand = List.of("java", "-Xmx128m", "-Xss1m", "-XX:ActiveProcessorCount=1",
-                    "-Dfile.encoding=UTF-8", "-cp", dir.toString(), "Main");
-        } else {
-            Path file = dir.resolve("main.js");
-            Files.writeString(file, code, StandardCharsets.UTF_8);
-            runCommand = List.of("node", "--permission", "--no-warnings", "--max-old-space-size=128",
-                    "--allow-fs-read=" + dir, "--allow-fs-write=" + dir, file.toString());
+        List<String> runCommand = prepare(lang, code, dir, result);
+        if (runCommand == null) {
+            result.setTotalMs(System.currentTimeMillis() - startAll);
+            return result;
         }
         result.setCompiled(true);
 
@@ -300,6 +440,9 @@ public class CodeSandboxService {
         return switch (lang) {
             case "js", "node", "javascript" -> "javascript";
             case "java" -> "java";
+            case "py", "python3", "python" -> "python";
+            case "c" -> "c";
+            case "c++", "cpp", "cxx", "cc" -> "cpp";
             default -> lang;
         };
     }

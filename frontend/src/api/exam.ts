@@ -94,3 +94,8 @@ export function deleteWrong(id) {
 export function getWrongJobs() {
   return request.get('/exam/wrong/jobs')
 }
+
+/** 可运行语言清单（后端 languages.json 驱动） */
+export function getCodeLanguages() {
+  return request.get<Array<{ value: string; label: string }>>('/exam/code/languages')
+}

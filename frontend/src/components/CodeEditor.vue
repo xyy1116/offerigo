@@ -8,6 +8,8 @@ import { basicSetup, EditorView } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import { javascript } from '@codemirror/lang-javascript'
 import { java } from '@codemirror/lang-java'
+import { python } from '@codemirror/lang-python'
+import { cpp } from '@codemirror/lang-cpp'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
@@ -27,7 +29,17 @@ const isDark = () => document.documentElement.dataset.theme === 'dark'
   || document.documentElement.classList.contains('dark')
 
 function languageExtension() {
-  return props.language === 'java' ? java() : javascript({ typescript: false })
+  switch (props.language) {
+    case 'java':
+      return java()
+    case 'python':
+      return python()
+    case 'c':
+    case 'cpp':
+      return cpp()
+    default:
+      return javascript({ typescript: false })
+  }
 }
 
 function themeExtension() {

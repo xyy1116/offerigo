@@ -111,7 +111,11 @@ public class ExamServiceImpl extends ServiceImpl<ExamPaperMapper, ExamPaper> imp
             }
 
             // 真题优先：按岗位技术栈从大厂题库选题，不足部分再由 AI 补齐
-            boolean codingRequired = industrySupport.requiresCoding(ctx.jobTitle, techStack);
+            // 冷门语言岗位（Go/Rust/PHP 等）不生成编程题，避免出现无法在线运行的题目
+            String codeLanguage = codeSandboxService.resolveLanguage(ctx.jobTitle(),
+                    String.join(" ", techStack.getTechStacks() == null ? List.of() : techStack.getTechStacks()));
+            boolean codingRequired = !codeLanguage.isEmpty() && codeSandboxService.supports(codeLanguage)
+                    && industrySupport.requiresCoding(ctx.jobTitle, techStack);
             int codingTarget = codingRequired ? (count >= 6 ? 2 : 1) : 0;
             List<QuestionVO> questions = new ArrayList<>();
             List<com.chuan.module.exam.entity.ExamQuestionBank> realQuestions = questionBankService.pick(
