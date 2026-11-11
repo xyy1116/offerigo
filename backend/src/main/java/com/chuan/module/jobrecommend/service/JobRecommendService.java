@@ -438,6 +438,12 @@ public class JobRecommendService {
             if (lower.contains("careers.tencent.com")) {
                 return "腾讯招聘";
             }
+            if (lower.contains("meituan.com")) {
+                return "美团招聘";
+            }
+            if (lower.contains("163.com")) {
+                return "网易招聘";
+            }
             if (lower.contains("jobs.bytedance.com")) {
                 return "字节跳动";
             }
