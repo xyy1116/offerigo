@@ -11,7 +11,7 @@
     "family": "javascript",
     "file": "main.js",
     "compile": [],
-    "run": ["node", "--permission", "--no-warnings", "--max-old-space-size=128", "--allow-fs-read={dir}", "--allow-fs-write={dir}", "{file}"]
+    "run": ["node", "{nodePermission}", "{nodeFsAllow}", "--no-warnings", "--max-old-space-size=128", "{file}"]
   },
   "python": {
     "label": "Python 3",

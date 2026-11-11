@@ -120,8 +120,8 @@ public class CodeSandboxService {
                 List.of("java", "-Xmx128m", "-Xss1m", "-XX:ActiveProcessorCount=1", "-Dfile.encoding=UTF-8",
                         "-cp", "{dir}", "Main")));
         map.put("javascript", spec("JavaScript", "javascript", "main.js", List.of(),
-                List.of("node", "--permission", "--no-warnings", "--max-old-space-size=128",
-                        "--allow-fs-read={dir}", "--allow-fs-write={dir}", "{file}")));
+                List.of("node", "{nodePermission}", "{nodeFsAllow}", "--no-warnings",
+                        "--max-old-space-size=128", "{file}")));
         map.put("python", spec("Python 3", "python", "main.py", List.of(),
                 List.of("python3", "-I", "-B", "{file}")));
         map.put("c", spec("C", "c", "main.c",
@@ -300,9 +300,44 @@ public class CodeSandboxService {
     private List<String> resolve(List<String> template, Path file, Path dir) {
         List<String> out = new ArrayList<>();
         for (String part : template == null ? List.<String>of() : template) {
+            // Node 的权限参数在 20 与 23+ 之间改名，启动时探测后动态展开
+            if ("{nodePermission}".equals(part)) {
+                out.addAll(nodePermissionFlags());
+                continue;
+            }
+            if ("{nodeFsAllow}".equals(part)) {
+                if (!nodePermissionFlags().isEmpty()) {
+                    out.add("--allow-fs-read=" + dir);
+                    out.add("--allow-fs-write=" + dir);
+                }
+                continue;
+            }
             out.add(part.replace("{file}", file.toString()).replace("{dir}", dir.toString()));
         }
         return out;
+    }
+
+    private static volatile List<String> nodeFlags;
+
+    private static List<String> nodePermissionFlags() {
+        if (nodeFlags == null) {
+            if (probeNodeFlag("--permission")) {
+                nodeFlags = List.of("--permission");
+            } else if (probeNodeFlag("--experimental-permission")) {
+                nodeFlags = List.of("--experimental-permission");
+            } else {
+                nodeFlags = List.of();
+            }
+        }
+        return nodeFlags;
+    }
+
+    private static boolean probeNodeFlag(String flag) {
+        try {
+            return new ProcessBuilder("node", flag, "--eval", "0").start().waitFor() == 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private boolean compile(List<String> command, Path dir, CodeRunResultVO result) throws Exception {
