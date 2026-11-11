@@ -168,6 +168,7 @@ cp .env.example .env      # 填写真实值，.env 已被 .gitignore 忽略
 | `DEEPSEEK_API_KEY` | DeepSeek，用于匹配评估与文书生成 | 是 |
 | `DASHSCOPE_API_KEY` | 阿里云百炼，用于对话、视觉、语音、向量（一个 key 全用） | 是 |
 | `WEBSOCKET_ALLOWED_ORIGINS` | WebSocket 允许的前端来源，逗号分隔 | 否 |
+| `APP_CORS_ALLOWED_ORIGINS` | 跨域白名单；公网部署时必须包含站点地址，否则登录等写操作会被 CORS 拒绝 | 否 |
 | `EXAM_CODE_ENABLED` | 是否允许编程题真实运行，默认 true | 否 |
 | `AI_TOOLS_ENABLED` | 面试开场是否启用工具调用，默认 true | 否 |
 
@@ -256,7 +257,7 @@ docker compose --env-file .env -f deploy/docker-compose.hostnet.yml up -d --buil
 | 项目 | 内容 |
 |---|---|
 | 在线演示地址 | http://47.104.161.228:18081 |
-| 评审体验账号 | `reviewer` / `admin123` |
-| 管理员账号 | `admin` / `admin123` |
+| 评审体验账号 | `reviewer` / `xxy123456` |
+| 管理员账号 | `admin` / `xxy123456` |
 | 演示视频 | 待录制 |
 | 技术文档 | [docs/技术文档.pdf](docs/技术文档.pdf) |
