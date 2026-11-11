@@ -2456,7 +2456,6 @@ function scheduleRecommendPoll() {
     if (recommendStale.value) scheduleRecommendPoll()
   }, 5000)
 }
-let recommendVersionTimer = null
 
 async function loadRecommendVersion() {
   try {
@@ -2465,6 +2464,8 @@ async function loadRecommendVersion() {
     const version = Number(data.version) || 0
     const count = Number(data.count) || 0
     const previousVersion = recommendVersion.value?.version || 0
+    // 切换前是否还在展示历史数据：用于判断这次刷新是不是「今日岗位刚更新完成」
+    const wasStale = recommendStale.value
     recommendVersion.value = { date: data.date || '', version, count }
     if (!version || !count) {
       recommendJobs.value = []
@@ -2472,7 +2473,12 @@ async function loadRecommendVersion() {
     }
     // 版本变化或本地还没拿到推荐列表时，同步拉取当天 TOP10
     if (version !== previousVersion || !recommendJobs.value.length) {
-      loadTodayRecommendJobs()
+      await loadTodayRecommendJobs()
+      // 从「昨日数据」切到「今日数据」：明确提示并高亮今日岗位
+      if (wasStale && !recommendStale.value) {
+        ElMessage.success('今日岗位已更新')
+        recommendJobs.value.forEach((job) => flashJob(job.id))
+      }
     }
     // 今日岗位还没就绪：轮询等待后台补爬，就绪后版本变化会自动触发刷新
     if (recommendStale.value) {
@@ -2772,14 +2778,11 @@ onMounted(() => {
   document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener('focus', loadRecommendVersion)
   loadRecommendVersion()
-  recommendVersionTimer = setInterval(loadRecommendVersion, 60000)
 })
 onUnmounted(() => {
   window.removeEventListener('focus', syncOnFocus)
   document.removeEventListener('visibilitychange', onVisibilityChange)
   window.removeEventListener('focus', loadRecommendVersion)
-  clearInterval(recommendVersionTimer)
-  recommendVersionTimer = null
   if (recommendPollTimer) clearTimeout(recommendPollTimer)
   recommendPollTimer = null
   if (elfIntroTimer) clearTimeout(elfIntroTimer)
