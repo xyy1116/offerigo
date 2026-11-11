@@ -650,18 +650,18 @@
         </div>
       </template>
       <template v-if="!jobImportMinimized">
-        <div class="import-tip">支持PDF、DOC、DOCX格式，单文件不超过20MB；推荐上传文本型PDF/Word，识别更快更准；扫描图片型将自动OCR识别</div>
+        <div class="import-tip">支持 PDF、DOC、DOCX 与 PNG/JPG 图片，单文件不超过 20MB；图片走视觉识别，比文本型慢几秒</div>
         <el-upload
           drag
           :show-file-list="false"
-          accept=".pdf,.doc,.docx"
+          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
           :http-request="doJobImport"
           :before-upload="beforeJobImport"
           :disabled="jobImporting"
         >
           <div class="upload-zone">
             <span class="upload-zone-title">将文件拖拽到此处，或<em>点击上传</em></span>
-            <span class="upload-zone-sub">仅支持 PDF / DOC / DOCX，≤ 20MB</span>
+            <span class="upload-zone-sub">支持 PDF / DOC / DOCX / 图片，≤ 20MB</span>
           </div>
         </el-upload>
       </template>
@@ -3285,8 +3285,8 @@ async function submitJobLink() {
 
 // —— 我的目标岗位：导入岗位文档 ——
 function beforeJobImport(file) {
-  if (!/\.(pdf|doc|docx)$/i.test(file.name || '')) {
-    ElMessage.warning('仅支持 PDF、DOC、DOCX 格式')
+  if (!/\.(pdf|doc|docx|png|jpg|jpeg|webp)$/i.test(file.name || '')) {
+    ElMessage.warning('仅支持 PDF、DOC、DOCX 与 PNG/JPG 图片')
     return false
   }
   if (file.size > 20 * 1024 * 1024) {

@@ -617,11 +617,26 @@ public class JobMatchServiceImpl implements JobMatchService {
         if (file.getSize() > 20 * 1024 * 1024) {
             throw new BusinessException("文件大小不能超过 20MB");
         }
-        String originalText = resumeDocumentParser.extractText(file);
+        String originalText = extractJobFileText(file);
         if (!StringUtils.hasText(originalText.trim())) {
-            throw new BusinessException("未能从文档中提取到有效文字，图片版 Word 暂不支持，请上传文本版岗位文件或 PDF");
+            throw new BusinessException("未能提取到有效文字，请上传更清晰的图片或文本版文件");
         }
         return buildJobImport(file.getOriginalFilename(), originalText);
+    }
+
+    /** 图片走视觉识别，文档走文本解析 */
+    private String extractJobFileText(MultipartFile file) {
+        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(java.util.Locale.ROOT);
+        boolean image = name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg")
+                || name.endsWith(".webp") || name.endsWith(".bmp");
+        if (!image) {
+            return resumeDocumentParser.extractText(file);
+        }
+        try {
+            return qwenVisionClient.ocr(file.getBytes(), file.getContentType());
+        } catch (Exception e) {
+            throw new BusinessException("图片识别失败，请换一张清晰的 JD 截图或改传 PDF");
+        }
     }
 
     @Override
