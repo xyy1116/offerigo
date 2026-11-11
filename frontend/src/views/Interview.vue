@@ -42,6 +42,7 @@
       :wave-active="waveActive"
       :asr-status-text="asrStatusText"
       :elapsed="elapsedText"
+      :agent-steps="agentSteps"
       :local-stream="localStream"
       v-model:text-input="textInput"
       @toggle-mic="toggleMic"
@@ -234,6 +235,8 @@ const elapsedText = computed(() => {
 })
 
 const messages = ref([])
+/** Agent 开场调研过程：每次工具调用一条，展示「查了什么、查到几条」 */
+const agentSteps = ref([])
 /** 当前面试阶段标识（overview/tech/project/scenario/reverse） */
 const currentStage = ref('')
 /** 当前阶段中文名（履历概览/专业深挖/项目拷问/场景题/反问环节） */
@@ -435,6 +438,7 @@ function stopElapsedTimer() {
 
 function startInterview() {
   stage.value = 'interview'
+  agentSteps.value = []
   startElapsedTimer()
   connectWs()
   nextTick(() => startWaveLoop())
@@ -718,6 +722,10 @@ function handleMessage(e) {
       if (Array.isArray(data.transcript)) {
         messages.value = data.transcript.map(parseTranscriptLine).filter(Boolean)
       }
+      break
+    case 'agent_trace':
+      // Agent 开场调研过程：让「AI 自主检索资料」这件事在界面上可见
+      if (Array.isArray(data.steps)) agentSteps.value = data.steps
       break
     case 'assistant_text':
       // 面试官文字回复（已无语音播报）：直接闭合气泡，并转入等待用户作答

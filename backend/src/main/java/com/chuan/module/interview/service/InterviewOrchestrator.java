@@ -470,9 +470,14 @@ public class InterviewOrchestrator {
         if (s.getInterviewerBrief() != null) {
             return;
         }
-        Future<String> future = briefExecutor.submit(() -> interviewBriefAgent.buildBrief(s));
+        Future<InterviewBriefAgent.Brief> future = briefExecutor.submit(() -> interviewBriefAgent.buildBrief(s));
         try {
-            s.setInterviewerBrief(future.get(BRIEF_TIMEOUT_SECONDS, TimeUnit.SECONDS));
+            InterviewBriefAgent.Brief brief = future.get(BRIEF_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            s.setInterviewerBrief(brief.text());
+            // 把 Agent 的检索过程同步给前端，让「工具调用」这件事可见
+            if (!brief.steps().isEmpty()) {
+                send(s, "agent_trace", Map.of("steps", brief.steps()));
+            }
         } catch (Exception e) {
             future.cancel(true);
             s.setInterviewerBrief("");

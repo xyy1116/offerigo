@@ -43,11 +43,19 @@ public class InterviewBriefAgent {
     @Value("${ai.tools.enabled:true}")
     private boolean enabled;
 
-    /** 生成面试官简报；关闭、无 Key、模型或工具出错时返回空串。 */
-    public String buildBrief(InterviewSession session) {
-        if (!enabled || session == null) {
-            return "";
+    /** 简报正文 + 本次实际发生的工具调用，用于前端展示 Agent 的检索过程。 */
+    public record Brief(String text, List<Map<String, Object>> steps) {
+        public static Brief empty() {
+            return new Brief("", List.of());
         }
+    }
+
+    /** 生成面试官简报；关闭、无 Key、模型或工具出错时返回空简报。 */
+    public Brief buildBrief(InterviewSession session) {
+        if (!enabled || session == null) {
+            return Brief.empty();
+        }
+        List<Map<String, Object>> steps = new ArrayList<>();
         try {
             List<Map<String, Object>> messages = new ArrayList<>();
             messages.add(message("system",
@@ -60,14 +68,42 @@ public class InterviewBriefAgent {
                     "本场面试岗位：" + (session.getPosition() == null ? "" : session.getPosition())
                             + "\n技术栈：" + (session.getTechStack() == null ? "" : session.getTechStack())
                             + "\n请检索该候选人的素材库与相关题库，给出考察点。"));
-            BiFunction<String, String, String> executor =
-                    (name, args) -> executeTool(name, args, session.getUserId());
+            BiFunction<String, String, String> executor = (name, args) -> {
+                String result = executeTool(name, args, session.getUserId());
+                steps.add(trace(name, args, result));
+                return result;
+            };
             String brief = qwenChatClient.chatWithTools(messages, tools(), executor, MAX_ROUNDS).trim();
-            return StringUtils.hasText(brief) ? brief : "";
+            return new Brief(StringUtils.hasText(brief) ? brief : "", steps);
         } catch (Exception e) {
             log.warn("生成面试官简报失败，按无简报继续: {}", e.getMessage());
-            return "";
+            return new Brief("", steps);
         }
+    }
+
+    /** 记录一次工具调用，供前端展示「查了什么、查到几条」。 */
+    private Map<String, Object> trace(String name, String arguments, String result) {
+        String keyword = "";
+        try {
+            keyword = objectMapper.readTree(arguments == null || arguments.isBlank() ? "{}" : arguments)
+                    .path("keyword").asText("");
+        } catch (Exception ignored) {
+            // 参数不是 JSON 时只记工具名
+        }
+        int hits = 0;
+        try {
+            JsonNode node = objectMapper.readTree(result);
+            if (node.isArray()) {
+                hits = node.size();
+            }
+        } catch (Exception ignored) {
+            // 结果不是 JSON 数组时按 0 条计
+        }
+        Map<String, Object> step = new LinkedHashMap<>();
+        step.put("tool", name);
+        step.put("keyword", keyword);
+        step.put("hits", hits);
+        return step;
     }
 
     private String executeTool(String name, String arguments, Long userId) {

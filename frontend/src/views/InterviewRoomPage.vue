@@ -83,6 +83,28 @@
         class="page-card-anim order-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] lg:order-1"
         style="animation-delay: 0.04s"
       >
+        <!-- Agent 开场调研：可折叠，让「AI 自主检索资料」这件事可见 -->
+        <details v-if="agentSteps.length" class="flex-none border-b border-[var(--color-border)] px-5 py-2.5">
+          <summary
+            class="cursor-pointer select-none text-[11px] text-[var(--color-text-3)] hover:text-[var(--color-text-2)]"
+          >
+            AI 面试官开场前检索了 {{ agentSteps.length }} 次资料，用于确定考察方向
+          </summary>
+          <ul class="mt-2 space-y-1.5">
+            <li
+              v-for="(step, i) in agentSteps"
+              :key="i"
+              class="flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--color-text-2)]"
+            >
+              <span
+                class="rounded-full bg-[var(--color-primary-bg)] px-2 py-0.5 text-[var(--color-primary)]"
+              >{{ toolLabel(step.tool) }}</span>
+              <span class="font-medium">「{{ step.keyword || '未指定' }}」</span>
+              <span class="text-[var(--color-text-3)]">命中 {{ step.hits }} 条</span>
+            </li>
+          </ul>
+        </details>
+
         <!-- 桌面端阶段信息 -->
         <div class="hidden flex-none items-center justify-between gap-4 border-b border-[var(--color-border)] px-5 py-3 md:flex">
           <div class="min-w-0">
@@ -308,6 +330,7 @@ const props = defineProps({
   waveActive: { type: Boolean, default: false },
   asrStatusText: { type: String, default: '' },
   elapsed: { type: String, default: '00:00' },
+  agentSteps: { type: Array, default: () => [] },
   localStream: { type: Object, default: null },
   textInput: { type: String, default: '' }
 })
@@ -328,6 +351,13 @@ const text = computed({
   get: () => props.textInput,
   set: (value) => emit('update:textInput', value)
 })
+
+/** Agent 工具名 → 中文展示名 */
+const TOOL_LABELS = {
+  search_resume_materials: '检索简历素材',
+  search_question_bank: '检索面试题库'
+}
+const toolLabel = (tool) => TOOL_LABELS[tool] || tool
 
 const stageIndex = computed(() => STAGES.findIndex((s) => s.key === props.currentStage))
 
