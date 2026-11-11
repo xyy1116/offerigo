@@ -54,9 +54,10 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         return true;
     }
 
-    /** 会触发大模型调用的路径；前端轮询用的轻量校验排除在外 */
+    /** 会触发大模型调用的路径；前端轮询用的轻量接口排除在外 */
     private boolean isAiPath(String path) {
-        if (path.contains("/analyze/verify")) {
+        // 轮询类：任务进度、素材变更校验，都很频繁但不调模型
+        if (path.contains("/analyze/verify") || path.contains("/analyze/task/")) {
             return false;
         }
         return path.contains("/generate")
