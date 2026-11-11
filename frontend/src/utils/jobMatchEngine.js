@@ -28,6 +28,9 @@ const SCORE_WEIGHT = { skill: 0.4, experience: 0.3, education: 0.15, fit: 0.15 }
 /** 非「能力要求」的行（地点/薪资/福利/免责说明等）不参与匹配打分。 */
 const NON_REQUIREMENT = /^(工作地点|薪资|薪资范围|福利|招聘人数|公司|公司地址|邮箱|联系方式|投递方式|面议)|未提及|无明确|不限制|不限|非真实招聘|学习指南/i
 
+/** 章节标题（【工作职责】【任职要求】这类）不是一条要求，参与匹配只会制造噪音。 */
+const SECTION_HEADING = /^[【\[（(]?\s*(工作职责|岗位职责|工作内容|职位描述|职位要求|岗位要求|任职要求|任职资格|技能要求|专业要求|加分项|补充信息|岗位亮点|我们提供|团队介绍|职位详情)\s*[】\]）)]?\s*[:：]?\s*$/
+
 /** 从 JD 文本兜底抽取要求清单（大模型结果不可用时使用）。 */
 function catalogFromJd(job) {
   const text = [job.jobName, job.jobRequirement, job.techStack].filter(Boolean).join('\n')
@@ -41,6 +44,7 @@ function catalogFromJd(job) {
     if (t.length < 4 || t.length > 120) return
     if (/^(面议|未提及|无)$/.test(t)) return
     if (NON_REQUIREMENT.test(t)) return
+    if (SECTION_HEADING.test(t)) return
     const key = t.slice(0, 24)
     if (seen.has(key)) return
     seen.add(key)
@@ -107,6 +111,7 @@ export function buildCatalog(job) {
     const req = String((d && d.requirement) || '').trim()
     if (req.length < 4) continue
     if (NON_REQUIREMENT.test(req)) continue
+    if (SECTION_HEADING.test(req)) continue
     const key = req.slice(0, 24)
     if (seen.has(key)) continue
     seen.add(key)
