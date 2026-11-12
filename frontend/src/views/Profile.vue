@@ -196,6 +196,9 @@
                 <button v-else class="row-action row-action--success" @click="pickResumeFile(row)">上传简历</button>
               </template>
             </el-table-column>
+            <el-table-column label="简历模板" width="120">
+              <template #default="{ row }">{{ row.resumeVersion || '—' }}</template>
+            </el-table-column>
             <el-table-column label="岗位链接" width="95" align="center">
               <template #default="{ row }">
                 <button v-if="row.jobLink" class="row-action" @click="openApplicationLink(row)">查看</button>

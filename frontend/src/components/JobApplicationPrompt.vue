@@ -17,6 +17,18 @@
         <span class="label">简历</span>
         <span class="value value--muted">简历可在个人中心「我的投递」里上传</span>
       </div>
+      <div class="prompt-field">
+        <span class="label">简历模板</span>
+        <el-select
+          v-model="resumeVersion"
+          size="small"
+          clearable
+          placeholder="选择本次投递使用的模板"
+          class="prompt-field-select"
+        >
+          <el-option v-for="t in templateOptions" :key="t.id" :label="t.name" :value="t.name" />
+        </el-select>
+      </div>
       <div v-if="current.jobLink" class="prompt-field">
         <span class="label">岗位链接</span>
         <span class="value value--link" :title="current.jobLink">{{ current.jobLink }}</span>
@@ -36,6 +48,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { getToken } from '@/utils/token'
 import { confirmApplication, deleteApplication, getApplicationReminders } from '@/api/jobmatch'
+import { fetchResumeTemplates, readCachedResumeTemplates } from '@/utils/resumeTemplates'
 import { usePositiveMomentStore } from '@/stores/positiveMoment'
 
 const positiveMoment = usePositiveMomentStore()
@@ -44,6 +57,9 @@ const visible = ref(false)
 const drafts = ref([])
 const current = ref(null)
 const saving = ref(false)
+// 本次活动使用的简历模板，随确认写入投递记录，便于日后回看投的是哪一版
+const resumeVersion = ref('')
+const templateOptions = ref(readCachedResumeTemplates() || [])
 // 本次会话内被关闭/跳过的草稿，避免每次切回窗口都重复打扰
 const skipped = new Set()
 let checking = false
@@ -57,6 +73,7 @@ function formatTime(v) {
 
 function showDraft(d) {
   current.value = d
+  resumeVersion.value = d.resumeVersion || ''
   visible.value = true
 }
 
@@ -81,7 +98,7 @@ async function confirmDraft() {
   if (!current.value || saving.value) return
   saving.value = true
   try {
-    await confirmApplication(current.value.id, {})
+    await confirmApplication(current.value.id, { resumeVersion: resumeVersion.value || null })
     positiveMoment.trigger({
       type: 'custom',
       title: '已加入投递台账',
@@ -185,6 +202,11 @@ function onDraftCreated() {
 
 onMounted(() => {
   scheduleCheck(0)
+  if (!templateOptions.value.length) {
+    fetchResumeTemplates()
+      .then((list) => { templateOptions.value = list || [] })
+      .catch(() => {})
+  }
   document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener('focus', onWindowFocus)
   window.addEventListener('job-application-draft-created', onDraftCreated)
@@ -234,6 +256,9 @@ onUnmounted(() => {
 .prompt-field .value--muted {
   font-size: 12px;
   color: var(--color-text-3);
+}
+.prompt-field-select {
+  flex: 1;
 }
 .prompt-footer {
   display: flex;
