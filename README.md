@@ -132,6 +132,7 @@ chuan/
 ├── frontend/                    Vue 3 前端
 │   └── src/{views,components,api,stores,router,styles,utils}
 ├── deploy/                      Docker / nginx / Maven 镜像配置
+├── docs/                        技术文档
 ├── .env.example                 环境变量模板
 └── README.md
 ```
@@ -262,4 +263,4 @@ docker compose --env-file .env -f deploy/docker-compose.hostnet.yml up -d --buil
 | 评审体验账号 | `reviewer` / `xyy123456` |
 | 管理员账号 | `admin` / `xyy123456` |
 | 演示视频 | 待录制 |
-| 技术文档 | 编写中 |
+| 技术文档 | [docs/技术文档.md](docs/技术文档.md) |
